@@ -1,0 +1,24 @@
+# Silas 10 na VPS. Uso: docker compose up -d --build
+# O servidor fica acessível só pela própria VPS (127.0.0.1:8787);
+# o nginx publica em https://PUBLIC_HOST (ver deploy/nginx-inscricoes.conf).
+services:
+  app:
+    build: .
+    image: silas10:latest
+    container_name: silas10
+    restart: unless-stopped
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST:?Defina PUBLIC_HOST no .env}
+    ports:
+      - "127.0.0.1:${PORT:-8787}:8787"
+    volumes:
+      - silas10-data:/data
+      - ./.env:/config/.env:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  silas10-data:

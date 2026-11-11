@@ -85,6 +85,12 @@ export const guestSessions = sqliteTable("guest_sessions", {
   createdAt: integer("created_at").notNull(),
   expiresAt: integer("expires_at").notNull(),
 });
+export const ownerSessions = sqliteTable("owner_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  credential: text("credential").notNull(),
+  createdAt: integer("created_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
 export const guestLoginAttempts = sqliteTable("guest_login_attempts", {
   key: text("key").primaryKey(),
   failures: integer("failures").notNull().default(0),

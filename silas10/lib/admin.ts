@@ -11,7 +11,9 @@ export async function requireAdmin(): Promise<AdminUser> {
   if (!env.DB) throw new AppError(503, "A gestão está sendo preparada. Tente novamente em instantes.");
   if (user && isAdminEmail(user.email)) {
     const email = user.email.trim().toLowerCase();
-    await env.DB.prepare("INSERT INTO owner_identity (key, user_id, email, bound_at) VALUES ('owner', ?, ?, ?) ON CONFLICT(key) DO NOTHING")
+    // Na VPS o organizador entra por senha (userId fixo "owner"): trocar OWNER_EMAIL
+    // no .env atualiza o vínculo sem intervenção manual no banco.
+    await env.DB.prepare("INSERT INTO owner_identity (key, user_id, email, bound_at) VALUES ('owner', ?, ?, ?) ON CONFLICT(key) DO UPDATE SET email=excluded.email, bound_at=excluded.bound_at WHERE owner_identity.user_id='owner' AND excluded.user_id='owner'")
       .bind(user.userId, email, new Date().toISOString()).run();
     const bound = await env.DB.prepare("SELECT user_id, email FROM owner_identity WHERE key = 'owner'").first<{ user_id: string; email: string }>();
     if (bound?.user_id === user.userId && bound.email === email) return { ...user, role: "owner", authMethod: "chatgpt" };

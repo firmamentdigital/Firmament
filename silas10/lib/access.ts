@@ -13,7 +13,7 @@ export async function listMembers(): Promise<AccessMember[]> {
 const emailSchema = z.string().trim().toLowerCase().email("Informe um e-mail válido.").max(254);
 export async function prepareInvitation(raw: unknown) {
   const { email, version, reset } = z.object({ email: emailSchema, version: z.number().int().nonnegative(), reset: z.boolean().default(false) }).parse(raw);
-  if (isAdminEmail(email)) throw new AppError(422, "O proprietário entra com seu próprio perfil do ChatGPT.");
+  if (isAdminEmail(email)) throw new AppError(422, "O proprietário entra pelo acesso de organizador.");
   const row = await env.DB!.prepare("SELECT active, version, password_changed_at FROM admin_members WHERE email=?").bind(email).first<{ active: number; version: number; password_changed_at: string | null }>();
   if (!row || row.active !== 1) throw new AppError(422, "Autorize o e-mail antes de preparar o convite.");
   if (row.version !== version) throw new AppError(409, "O acesso mudou. Atualize a lista de convidados.");
