@@ -1,0 +1,55 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1794355476430,
+      "tag": "0000_silly_senator_kelly",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1794356600081,
+      "tag": "0001_child_guardian_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794405991065,
+      "tag": "0002_robust_roxanne_simpson",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794413637008,
+      "tag": "0003_hard_franklin_storm",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1794420826966,
+      "tag": "0004_great_bulldozer",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794421275116,
+      "tag": "0005_late_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794425050388,
+      "tag": "0006_clear_wither",
+      "breakpoints": true
+    }
+  ]
+}

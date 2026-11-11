@@ -1,0 +1,69 @@
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, Copy, Download, ImagePlus, LoaderCircle, MessageCircle, Plus, Search, Share2, X } from "lucide-react";
+import { formatPhone, normalizeName } from "@/lib/event";
+import { contactText, whatsappUrl, type MessageCampaign, type MessageContact, type MessageDetail } from "@/lib/message-types";
+
+const templates=[
+  {title:"O encontro está chegando",body:"Olá, {responsavel}! O encontro com Silas 10 está chegando! Esperamos por {criancas} no dia 21 de novembro, das 9h às 11h, no Auditório do Conselho Deliberativo do SPFC. Entrada pelo Portão 17 · Rua Laudo Natel. Guarde o cartão de confirmação. Inscrição: {codigo}. Até lá!"},
+  {title:"Orientações para a chegada",body:"Olá, {responsavel}! Já está tudo preparado para receber sua família no encontro com Silas 10. Dia 21 de novembro, das 9h às 11h. A entrada é pelo Portão 17, na Rua Laudo Natel. Apresente o cartão com QR Code ou informe o código {codigo}. Para situações especiais, fale com Mario Ferrari: (11) 94724-8000. Esperamos vocês!"},
+];
+async function requestJson<T>(url:string,options?:RequestInit):Promise<T>{const r=await fetch(url,{cache:"no-store",...options});const value=await r.json() as T & {error?:string};if(!r.ok)throw new Error(value.error||"Não foi possível concluir agora.");return value as T;}
+
+export default function MessageCenter({contactCount}:{contactCount:number}) {
+  const [campaigns,setCampaigns]=useState<MessageCampaign[]>([]);
+  const [detail,setDetail]=useState<MessageDetail|null>(null);
+  const [compose,setCompose]=useState(false);
+  const [title,setTitle]=useState(templates[0].title);
+  const [body,setBody]=useState(templates[0].body);
+  const [image,setImage]=useState<File|null>(null);
+  const [preview,setPreview]=useState("");
+  const [shareFile,setShareFile]=useState<File|null>(null);
+  const [savedImagePreview,setSavedImagePreview]=useState("");
+  const [imageError,setImageError]=useState("");
+  const [loading,setLoading]=useState(true);
+  const [busy,setBusy]=useState("");
+  const [error,setError]=useState("");
+  const [notice,setNotice]=useState("");
+  const [query,setQuery]=useState("");
+  const [filter,setFilter]=useState("pending");
+  const [page,setPage]=useState(0);
+  const [activePhone,setActivePhone]=useState("");
+  const upload=useRef<HTMLInputElement>(null);
+  const load=()=>requestJson<MessageCampaign[]>("/api/admin/messages").then(setCampaigns);
+  useEffect(()=>{void load().catch(e=>setError(e.message)).finally(()=>setLoading(false));},[]);
+  useEffect(()=>{if(!image){setPreview("");return;}const url=URL.createObjectURL(image);setPreview(url);return()=>URL.revokeObjectURL(url);},[image]);
+  useEffect(()=>{
+    setShareFile(null);setImageError("");if(!detail?.imageName)return;
+    let active=true;
+    void fetch(`/api/admin/messages/${detail.id}/image`,{cache:"no-store"}).then(async r=>{if(!r.ok)throw new Error();return r.blob();}).then(blob=>{if(active)setShareFile(new File([blob],detail.imageName!,{type:blob.type}));}).catch(()=>{if(active)setImageError("Não foi possível preparar a imagem. Reabra este aviso para tentar novamente.");});
+    return()=>{active=false;};
+  },[detail?.id,detail?.imageName]);
+  useEffect(()=>{if(!shareFile){setSavedImagePreview("");return;}const url=URL.createObjectURL(shareFile);setSavedImagePreview(url);return()=>URL.revokeObjectURL(url);},[shareFile]);
+  useEffect(()=>{setPage(0);},[query,filter,detail?.id]);
+  const sample=detail?.contacts[0]||{responsibleNames:["Nome do responsável"],childNames:["Nome da criança"],codes:["S10-EXEMPLO"]};
+  const contacts=(detail?.contacts||[]).filter(c=>(filter==="all"||Boolean(c.confirmedAt)===(filter==="confirmed"))&&(!query||normalizeName([c.phone,...c.responsibleNames,...c.childNames,...c.codes].join(" ")).includes(normalizeName(query))));
+  useEffect(()=>{setPage(p=>Math.min(p,Math.max(0,Math.ceil(contacts.length/20)-1)));},[contacts.length]);
+  const activeContact=detail?.contacts.find(c=>c.phone===activePhone);
+  async function open(id:string){setBusy(id);setError("");setNotice("");try{setDetail(await requestJson<MessageDetail>("/api/admin/messages/"+id));setCompose(false);setQuery("");setActivePhone("");}catch(e){setError((e as Error).message);}finally{setBusy("");}}
+  async function save(e:React.FormEvent){e.preventDefault();setBusy("save");setError("");try{const form=new FormData();form.set("title",title);form.set("body",body);if(image)form.set("image",image);setDetail(await requestJson<MessageDetail>("/api/admin/messages",{method:"POST",body:form}));setCompose(false);setImage(null);setQuery("");setActivePhone("");await load();setNotice("Aviso preparado. Agora envie pelo seu WhatsApp e marque cada contato após concluir.");}catch(e){setError((e as Error).message);}finally{setBusy("");}}
+  async function mark(contact:MessageContact){if(!detail)return;setBusy(contact.phone);setError("");try{await requestJson(`/api/admin/messages/${detail.id}`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({phone:contact.phone,confirmed:!contact.confirmedAt,version:contact.version})});setDetail(await requestJson<MessageDetail>(`/api/admin/messages/${detail.id}`));await load();setNotice(contact.confirmedAt?"Marcação desfeita.":"Contato marcado como avisado.");}catch(e){setError((e as Error).message);}finally{setBusy("");}}
+  async function copy(text:string){try{await navigator.clipboard.writeText(text);setNotice("Texto copiado.");}catch{setError("Não foi possível copiar. Selecione e copie o texto da mensagem.");}}
+  function download(){if(!shareFile)return;const url=URL.createObjectURL(shareFile);const a=document.createElement("a");a.href=url;a.download=shareFile.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+  async function share(contact:MessageContact){
+    if(!detail||!shareFile)return;setError("");
+    if(!navigator.canShare?.({files:[shareFile]})){download();setNotice("Imagem baixada. Anexe-a à conversa do WhatsApp junto com o texto.");return;}
+    try{await navigator.share({files:[shareFile],text:contactText(detail.body,contact),title:"Silas 10"});setNotice("Compartilhamento concluído. Confira o envio no WhatsApp antes de marcar como avisado.");}catch(e){if((e as Error).name!=="AbortError")setError("Não foi possível compartilhar. Baixe a imagem e anexe-a no WhatsApp.");}
+  }
+  function pick(file:File){if(!["image/png","image/jpeg","image/webp"].includes(file.type)||file.size>5*1024*1024){setError("Escolha uma imagem PNG, JPG ou WebP de até 5 MB.");return;}setImage(file);setError("");}
+  return <section className="operation-panel messages-panel" aria-label="Avisos pelo WhatsApp">
+    <div className="operation-heading"><span className="operation-icon whatsapp-icon"><MessageCircle size={25}/></span><div><h2>A família bem informada.</h2><p>Prepare o aviso, envie pelo seu WhatsApp e acompanhe os contatos.</p></div>{!compose&&<button className="button primary" onClick={()=>{setCompose(true);setDetail(null);setError("");setNotice("");}} disabled={!contactCount}><Plus size={18}/>Novo aviso</button>}</div>
+    <div className="message-explainer"><strong>Como funciona</strong><p>Um contato por celular, mesmo com mais de uma criança. Você confirma o envio no WhatsApp e depois marca como avisado. Abrir a conversa não confirma o envio.</p></div>
+    {error&&<div className="form-error" role="alert">{error}</div>}{notice&&<div className="operation-success" role="status"><Check size={18}/>{notice}</div>}
+    {compose?<form onSubmit={save} className="message-composer"><div className="template-buttons">{templates.map(t=><button type="button" className="button secondary" key={t.title} onClick={()=>{setTitle(t.title);setBody(t.body);}}>{t.title}</button>)}</div><div className="field"><label htmlFor="message-title">Nome do aviso</label><input id="message-title" required minLength={3} maxLength={100} value={title} onChange={e=>setTitle(e.target.value)}/></div><div className="field"><label htmlFor="message-body">Mensagem</label><textarea id="message-body" rows={7} maxLength={2000} value={body} onChange={e=>setBody(e.target.value)}/><small>Personalize com {"{responsavel}"}, {"{criancas}"} e {"{codigo}"}. {body.length}/2.000 caracteres</small></div><div className="message-image-picker"><input ref={upload} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={e=>{const f=e.target.files?.[0];if(f)pick(f);e.target.value="";}} aria-label="Imagem do aviso"/><button type="button" className="button secondary" onClick={()=>upload.current?.click()}><ImagePlus size={18}/>{image?"Trocar imagem":"Adicionar imagem"}</button><span>Opcional · PNG, JPG ou WebP · até 5 MB</span>{preview&&<div className="message-upload-preview"><img src={preview} alt="Imagem escolhida para o aviso"/><button type="button" className="icon-button" onClick={()=>setImage(null)} aria-label="Remover imagem"><X size={18}/></button></div>}</div><div className="message-preview"><span className="eyebrow">PRÉVIA DO TEXTO</span><p>{contactText(body,sample)||"Aviso com imagem."}</p></div><p className="quiet-copy">O aviso incluirá {contactCount} {contactCount===1?"celular cadastrado":"celulares cadastrados"} agora. Preparar o aviso ainda não envia mensagens.</p><div className="form-actions"><button type="button" className="button secondary" onClick={()=>setCompose(false)} disabled={busy==="save"}>Cancelar</button><button className="button primary grow" disabled={busy==="save"||(!body.trim()&&!image)}>{busy==="save"?<LoaderCircle className="spin" size={18}/>:<Check size={18}/>}Preparar aviso</button></div></form>:detail?<>
+      <button className="text-button message-back" onClick={()=>{setDetail(null);setNotice("");setError("");}}><ArrowLeft size={16}/>Todos os avisos</button><div className="campaign-detail-heading"><div><h3>{detail.title}</h3><p>{detail.confirmed} de {detail.total} contatos marcados como avisados</p></div><select value={filter} onChange={e=>setFilter(e.target.value)} aria-label="Filtrar contatos do aviso"><option value="pending">Pendentes</option><option value="confirmed">Avisados</option><option value="all">Todos os contatos</option></select></div><div className="message-preview"><span className="eyebrow">PRÉVIA PERSONALIZADA</span><p>{contactText(detail.body,activeContact||sample)||"Aviso com imagem."}</p>{detail.imageName&&<>{savedImagePreview&&<img className="campaign-image" src={savedImagePreview} alt="Imagem deste aviso"/>}{imageError?<p role="alert">{imageError}</p>:<button className="button secondary" disabled={!shareFile} onClick={download}><Download size={16}/>{shareFile?"Baixar imagem":"Preparando imagem…"}</button>}</>}</div><label className="search-field"><Search size={18}/><input placeholder="Busque responsável ou celular" aria-label="Buscar contato do aviso" value={query} onChange={e=>setQuery(e.target.value)}/></label>
+      {activeContact&&<div className="contact-instructions" role="status"><strong>Envio para {activeContact.responsibleNames.join(" e ")}</strong><p>1. Envie a mensagem na conversa aberta.<br/>{detail.imageName?"2. Compartilhe a imagem abaixo ou anexe o arquivo baixado.\n3. Depois, marque o contato como avisado.":"2. Volte aqui e marque o contato como avisado."}</p>{detail.imageName&&<button className="button secondary" disabled={!shareFile} onClick={()=>void share(activeContact)}><Share2 size={17}/>Compartilhar imagem + texto</button>}<button className="text-button" onClick={()=>void copy(contactText(detail.body,activeContact))}><Copy size={15}/>Copiar texto personalizado</button></div>}
+      <div className="message-contacts">{contacts.slice(page*20,(page+1)*20).map(contact=><article className="message-contact" key={contact.phone}><div><strong>{contact.responsibleNames.join(" e ")}</strong><span>{formatPhone(contact.phone)}</span><small>{contact.childNames.join(", ")}</small></div><div className="contact-actions"><a className="button secondary" href={whatsappUrl(contact.phone,contactText(detail.body,contact))} target="_blank" rel="noopener noreferrer" onClick={()=>{setActivePhone(contact.phone);setNotice("");}}><MessageCircle size={16}/>Abrir WhatsApp</a>{detail.imageName&&<button className="button secondary" disabled={!shareFile} onClick={()=>{setActivePhone(contact.phone);void share(contact);}}><Share2 size={16}/>Compartilhar imagem</button>}<button className={"button "+(contact.confirmedAt?"contact-confirmed":"primary")} disabled={!!busy} onClick={()=>void mark(contact)}>{busy===contact.phone?<LoaderCircle className="spin" size={16}/>:<Check size={16}/>} {contact.confirmedAt?"Avisado · desfazer":"Marcar como avisado"}</button></div></article>)}</div>{!contacts.length&&<p className="operation-tip">Nenhum contato nesta seleção.</p>}{contacts.length>20&&<div className="list-footer"><span>Página {page+1} de {Math.ceil(contacts.length/20)}</span><div><button className="button secondary" disabled={!page} onClick={()=>setPage(p=>p-1)}>Anterior</button><button className="button secondary" disabled={(page+1)*20>=contacts.length} onClick={()=>setPage(p=>p+1)}>Próxima</button></div></div>}
+    </>:loading?<div className="empty-state small"><LoaderCircle className="spin" size={25}/><p>Carregando avisos…</p></div>:campaigns.length?<div className="campaign-list">{campaigns.map(c=><button key={c.id} onClick={()=>void open(c.id)} disabled={!!busy}><span><strong>{c.title}</strong><small>{new Date(c.createdAt).toLocaleDateString("pt-BR")} · {c.imageName?"Texto / imagem":"Texto"}</small></span><b>{busy===c.id?"Abrindo…":`${c.confirmed} / ${c.total} avisados`}</b></button>)}</div>:<div className="empty-state small"><MessageCircle size={30}/><h3>{contactCount?"Tudo pronto para o primeiro aviso.":"Os avisos começam com a primeira inscrição."}</h3><p>Use os modelos de lembrete ou escreva suas orientações.</p></div>}
+  </section>;
+}

@@ -1,0 +1,14 @@
+{
+  "projeto": "Silas 10 — Inscrições e presença",
+  "versao": 10,
+  "commit_origem": "74c8cf916ce449e111265200a284156f1cf096b8",
+  "data_exportacao": "2026-11-11",
+  "tipo": "codigo-fonte-sem-dados-de-producao",
+  "arquivos_originais": 195,
+  "adicoes_do_pacote": [
+    "LEIA-ME-PRIMEIRO.md",
+    ".dev.vars.example",
+    "EXPORTACAO.json",
+    "SHA256SUMS.txt"
+  ]
+}

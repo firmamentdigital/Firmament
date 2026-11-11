@@ -1,0 +1,4 @@
+# Exemplo para desenvolvimento local. Copie para .dev.vars.
+# Identidade simulada, somente no perfil local portátil.
+# Em produção, use o e-mail real autorizado.
+OWNER_EMAIL="seedy@sites.test"
