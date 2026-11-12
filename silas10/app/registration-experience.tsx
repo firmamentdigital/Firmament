@@ -32,7 +32,7 @@ export default function RegistrationExperience({ brands }: { brands: EventBrand[
             <div className="event-place"><MapPin size={18} /><div><strong>Auditório do Conselho<br />Deliberativo do SPFC</strong><span>Portão 17 · Rua Laudo Natel</span></div></div>
           </div>
         </div>
-        <div className="audience-line"><strong className="audience-age">8 a 16 anos</strong><div><b>Para crianças e jovens.</b><span>Pais e responsáveis são bem-vindos.</span></div></div>
+        <div className="audience-line"><strong className="audience-age">8 a 16 anos</strong><div><b>Para crianças e jovens.</b><span>Pais e responsáveis são bem-vindos.</span></div><p className="audience-urgency"><span>Vagas Limitadas</span><a href="#inscricao">Reserve já!</a></p></div>
       </aside>}
 
       <section className="registration-column" id="inscricao" aria-label="Formulário de inscrição">
