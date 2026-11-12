@@ -13,8 +13,16 @@ const loginInput = z.object({
   remember: z.boolean().default(false),
 });
 
+// VPS: aceita também "pbkdf2-sha256:100000:sal:hash" (gerado por scripts/owner-password.mjs),
+// porque arquivos .env expandem "$" e corromperiam o formato original.
+function masterPasswordHash() {
+  const value = env.MASTER_PASSWORD_HASH?.trim() || "";
+  const colon = /^pbkdf2-sha256:100000:([a-f0-9]{32}):([a-f0-9]{64})$/.exec(value);
+  return colon ? ["pbkdf2-sha256", "100000", colon[1], colon[2]].join("$") : value;
+}
+
 export function masterConfigured() {
-  return Boolean(env.MASTER_LOGIN?.trim() && /^pbkdf2-sha256\$100000\$[a-f0-9]{32}\$[a-f0-9]{64}$/.test(env.MASTER_PASSWORD_HASH || ""));
+  return Boolean(env.MASTER_LOGIN?.trim() && /^pbkdf2-sha256\$100000\$[a-f0-9]{32}\$[a-f0-9]{64}$/.test(masterPasswordHash()));
 }
 
 function database() {
@@ -41,7 +49,7 @@ export function requireMasterOrigin(request: Request) {
 }
 
 async function credentialFingerprint() {
-  return secretHash(env.MASTER_LOGIN!.trim().toLowerCase() + ":" + env.MASTER_PASSWORD_HASH!);
+  return secretHash(env.MASTER_LOGIN!.trim().toLowerCase() + ":" + masterPasswordHash());
 }
 
 export async function readMasterSession() {
@@ -73,7 +81,7 @@ export async function loginMaster(request: Request, raw: unknown) {
     if (row && row.window_started > now - WINDOW && row.failures >= key.limit) throw new AppError(429, "Muitas tentativas. Aguarde 15 minutos antes de tentar novamente.");
   }
   // Always derive the password, including for a different login name.
-  const matches = await verifyPassword(input.password, env.MASTER_PASSWORD_HASH!);
+  const matches = await verifyPassword(input.password, masterPasswordHash());
   if (normalizedLogin !== env.MASTER_LOGIN!.trim().toLowerCase() || !matches) {
     await db.batch([
       db.prepare("DELETE FROM guest_login_attempts WHERE window_started<?").bind(now - WINDOW * 2),

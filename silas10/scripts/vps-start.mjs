@@ -14,15 +14,20 @@ const port = process.env.PORT || "8787";
 const wrangler = resolve(root, "node_modules/wrangler/bin/wrangler.js");
 
 if (!/^[a-z0-9.-]+$/i.test(publicHost)) {
-  console.error("Defina PUBLIC_HOST no .env (ex.: inscricoes.wmorente.com.br).");
+  console.error("Defina PUBLIC_HOST no .env (ex.: silas10.wmorente.com.br).");
   process.exit(1);
 }
 if (!existsSync(envFile)) {
   console.error(`Arquivo de configuração não encontrado: ${envFile}`);
   process.exit(1);
 }
-const vars = readFileSync(envFile, "utf8");
-for (const name of ["OWNER_EMAIL", "OWNER_PASSWORD_HASH"]) {
+let vars;
+try { vars = readFileSync(envFile, "utf8"); }
+catch (error) {
+  console.error(`Sem permissão para ler ${envFile}. Na VPS, rode: chown 1000:1000 .env && chmod 600 .env`);
+  throw error;
+}
+for (const name of ["OWNER_EMAIL", "MASTER_LOGIN", "MASTER_PASSWORD_HASH"]) {
   if (!new RegExp(`^${name}=\\S+`, "m").test(vars)) {
     console.error(`Defina ${name} no .env. A gestão fica bloqueada sem ele.`);
     process.exit(1);

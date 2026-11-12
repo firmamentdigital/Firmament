@@ -1,6 +1,6 @@
 # Silas 10 na VPS. Uso: docker compose up -d --build
-# O servidor fica acessível só pela própria VPS (127.0.0.1:8787);
-# o nginx publica em https://PUBLIC_HOST (ver deploy/nginx-inscricoes.conf).
+# O servidor fica acessível só pela própria VPS (127.0.0.1:PORT);
+# o nginx publica em https://PUBLIC_HOST (ver deploy/nginx-silas10.conf).
 services:
   app:
     build: .

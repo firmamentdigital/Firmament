@@ -18,7 +18,14 @@ const SIGN_IN_PATH = "/signin-with-chatgpt";
 const SIGN_OUT_PATH = "/signout-with-chatgpt";
 const CALLBACK_PATH = "/callback";
 
+// VPS (hospedagem própria): os cabeçalhos oai-authenticated-* só são confiáveis
+// dentro do ChatGPT Sites, que os injeta. Fora de lá, qualquer visitante poderia
+// enviá-los e se passar pelo proprietário. Por isso ficam desligados; o acesso do
+// organizador é feito pelo login master (lib/master-auth.ts).
+const TRUST_PLATFORM_IDENTITY_HEADERS: boolean = false;
+
 export async function getChatGPTUser(): Promise<ChatGPTUser | null> {
+  if (!TRUST_PLATFORM_IDENTITY_HEADERS) return null;
   const requestHeaders = await headers();
   const userId = requestHeaders.get(USER_ID_HEADER);
   const email = requestHeaders.get(USER_EMAIL_HEADER);

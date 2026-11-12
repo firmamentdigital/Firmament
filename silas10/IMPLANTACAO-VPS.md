@@ -1,129 +1,90 @@
-# Silas 10 — Implantação na VPS (Hostinger)
+# Silas 10 — Implantação e atualização na VPS (Hostinger)
 
-Guia para publicar o sistema de inscrições em **https://inscricoes.wmorente.com.br** na VPS da Hostinger, sem depender do ChatGPT Sites.
+Sistema de inscrições publicado em **https://silas10.wmorente.com.br**, rodando na VPS da Hostinger, sem depender do ChatGPT Sites. O endereço antigo `inscricoes.wmorente.com.br` redireciona para o novo.
 
-## O que mudou em relação ao ChatGPT Sites
+## Diferenças em relação ao ChatGPT Sites
 
 | Item | ChatGPT Sites | VPS |
 |---|---|---|
 | Visual, formulário, gestão, QR Code, exportações, avisos | ✅ | ✅ igual |
-| Login do organizador | Conta do ChatGPT | **E-mail + senha** (definidos no `.env`) |
-| Login de convidados | Convite + senha | ✅ igual |
-| Banco de dados e imagens | Nuvem da OpenAI | Volume Docker na VPS (`silas10-data`) |
-| Backup | Automático da plataforma | **Script diário** (passo 7) |
+| Acesso do proprietário | Conta do ChatGPT ou login master | **Somente login master** (`MASTER_LOGIN` + senha) |
+| Convidados | Convite + senha | ✅ igual |
+| Banco e imagens | Nuvem da OpenAI | Volume Docker `silas10_silas10-data` na VPS |
+| Backup | Plataforma | Script diário (`scripts/vps-backup.sh`) |
 
-> **Dados:** o banco começa **vazio**. As inscrições feitas no site do ChatGPT não vêm junto.
+### Ajustes feitos no código original para a VPS
 
-## Requisitos da VPS
+1. `app/chatgpt-auth.ts`: os cabeçalhos `oai-authenticated-*` são **ignorados**. Fora do ChatGPT Sites qualquer visitante poderia enviá-los e se passar pelo proprietário.
+2. `lib/master-auth.ts`: aceita o hash da senha também no formato `pbkdf2-sha256:100000:sal:hash`, porque arquivos `.env` expandem o caractere `$` do formato original.
+3. Infraestrutura própria: `Dockerfile`, `docker-compose.yml`, `deploy/nginx-silas10.conf`, `scripts/vps-*.{mjs,sh}` e `scripts/owner-password.mjs`.
 
-- Ubuntu 22.04/24.04 com **Docker** e **Docker Compose** (`docker compose version`)
-- **nginx** e **certbot** (ou outro proxy reverso já usado na VPS)
-- ~2 GB livres em disco e ~400 MB de RAM para o sistema
-- Portas 80 e 443 liberadas no firewall da Hostinger
+> **Ao receber uma nova versão do ChatGPT**, reaplique apenas os itens 1 e 2. Todo o resto do código vem da exportação original.
 
-## 1. DNS (painel da Hostinger)
+## Instalação nova (resumo)
 
-**Domínios → wmorente.com.br → DNS / Nameservers → Registros DNS**
-
-| Tipo | Nome | Aponta para | TTL |
-|---|---|---|---|
-| A | `inscricoes` | IP da VPS (VPS → Visão geral) | 3600 |
-
-Apague antes qualquer registro existente com o nome `inscricoes`.
-
-## 2. Enviar o código para a VPS
-
-O repositório é privado. Para o `git clone` funcionar, use um token de acesso do GitHub (somente leitura) quando ele pedir a senha. A alternativa é baixar o ZIP pelo GitHub e enviar à VPS por SFTP.
+Na VPS, como root:
 
 ```bash
-sudo mkdir -p /opt/silas10 && sudo chown $USER /opt/silas10
-git clone -b claude/practical-fermi-y6yde0 https://github.com/firmamentdigital/Firmament.git /tmp/firmament
-cp -a /tmp/firmament/silas10/. /opt/silas10/ && rm -rf /tmp/firmament
+mkdir -p /opt/silas10   # copie para cá o conteúdo da pasta silas10 do repositório
 cd /opt/silas10
-```
-
-## 3. Configurar (`.env`)
-
-```bash
-cp .env.example .env
-nano .env        # preencha PUBLIC_HOST e OWNER_EMAIL
+cp .env.example .env && nano .env              # PUBLIC_HOST, PORT, OWNER_EMAIL, MASTER_LOGIN
 docker compose build
-docker compose run --rm --no-deps app node scripts/owner-password.mjs
-```
-
-O último comando pede a senha do organizador (mínimo 10 caracteres) e imprime uma linha `OWNER_PASSWORD_HASH=...`. **Cole essa linha no `.env`**. A senha em si não fica salva em lugar nenhum.
-
-```bash
-chmod 600 .env
-```
-
-> Se a porta 8787 já estiver em uso na VPS, mude `PORT` no `.env` e a porta em `deploy/nginx-inscricoes.conf`.
-
-## 4. Subir o sistema
-
-```bash
+docker compose run --rm --no-deps app node scripts/owner-password.mjs   # cole a linha MASTER_PASSWORD_HASH=... no .env
+chown 1000:1000 .env && chmod 600 .env
 docker compose up -d
-docker compose logs -f app      # aguarde "Ready on http://0.0.0.0:8787" e saia com Ctrl+C
 ```
 
-Na primeira subida as migrações do banco são aplicadas sozinhas. Nas próximas, só as novas.
+> **Permissão do `.env`:** o container roda com o usuário `node` (UID 1000). Se o arquivo pertencer só ao root, o sistema fica reiniciando com `EACCES: permission denied, open '/config/.env'`. Comandos como `sed -i` recriam o arquivo como root: **sempre repita o `chown` depois de editar.**
 
-## 5. Publicar com HTTPS (nginx + certbot)
+Publicação com HTTPS:
 
 ```bash
-sudo cp deploy/nginx-inscricoes.conf /etc/nginx/sites-available/inscricoes.wmorente.com.br
-sudo ln -s /etc/nginx/sites-available/inscricoes.wmorente.com.br /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d inscricoes.wmorente.com.br --redirect
+cp deploy/nginx-silas10.conf /etc/nginx/sites-available/silas10.wmorente.com.br.conf
+ln -sf /etc/nginx/sites-available/silas10.wmorente.com.br.conf /etc/nginx/sites-enabled/
+nginx -t && systemctl reload nginx
+certbot --nginx -d silas10.wmorente.com.br --redirect
 ```
 
-> Se a VPS usa outro proxy (Traefik, Caddy, EasyPanel, Coolify), aponte `inscricoes.wmorente.com.br` para `127.0.0.1:8787` repassando o cabeçalho `Host` original e, se possível, `CF-Connecting-IP` com o IP do visitante.
+DNS (Hostinger → Domínios → wmorente.com.br → Registros DNS): tipo **A**, nome `silas10`, apontando para o IP da VPS.
 
-## 6. Testar
-
-1. Abra `https://inscricoes.wmorente.com.br` pelo celular (dados móveis).
-2. Faça uma inscrição de teste.
-3. Entre em `/gestao` → **Sou o organizador** → e-mail e senha do `.env`.
-4. Confira a inscrição, leia o QR Code e baixe o Excel e o PDF.
-5. Em **Configurações**, convide os demais membros da equipe.
-6. Exclua a inscrição de teste.
-
-## 7. Backup diário (obrigatório)
+## Atualizar para uma nova versão do código
 
 ```bash
-bash scripts/vps-backup.sh                  # teste manual
-crontab -e
+cd /opt/silas10
+bash scripts/vps-backup.sh                       # 1. backup antes de tudo
+# 2. substitua os arquivos do código (mantendo .env e backups/)
+docker compose up -d --build                     # 3. monta e reinicia; migrações novas são aplicadas sozinhas
+docker compose ps                                # 4. deve mostrar (healthy)
 ```
 
-Adicione a linha:
+Se algo der errado, restaure o backup do passo 1 (ver abaixo) e volte os arquivos da versão anterior.
 
-```
-0 3 * * * cd /opt/silas10 && bash scripts/vps-backup.sh >> backups/backup.log 2>&1
-```
+## Backup e restauração
 
-Os backups ficam em `/opt/silas10/backups/` por 14 dias. **Copie periodicamente para fora da VPS** (Google Drive, outro servidor). Se a VPS for perdida, os backups locais também serão.
-
-**Restaurar** (substitui os dados atuais e antes salva uma cópia de segurança `antes-de-restaurar-*`):
+- Agendado no `crontab` para todo dia às 3h UTC (meia-noite em Brasília), mantendo 14 dias em `/opt/silas10/backups/`.
+- **Copie periodicamente para fora da VPS.** Se a VPS for perdida, os backups locais também serão.
 
 ```bash
-bash scripts/vps-restore.sh backups/silas10-AAAA-MM-DD_HHMMSS.tar.gz
+bash scripts/vps-backup.sh                                            # backup manual
+bash scripts/vps-restore.sh backups/silas10-AAAA-MM-DD_HHMMSS.tar.gz  # restauração (pede confirmação)
 ```
+
+A restauração salva antes uma cópia `antes-de-restaurar-*` dos dados atuais.
 
 ## Operação do dia a dia
 
 | Tarefa | Comando (em `/opt/silas10`) |
 |---|---|
-| Ver se está no ar | `docker compose ps` (status `healthy`) |
+| Ver se está no ar | `docker compose ps` |
 | Ver logs | `docker compose logs --tail 100 app` |
 | Reiniciar | `docker compose restart app` |
-| Trocar a senha do organizador | gerar novo hash (passo 3), trocar no `.env`, `docker compose up -d --force-recreate` (derruba as sessões abertas) |
-| Trocar o e-mail do organizador | mudar `OWNER_EMAIL` no `.env`, `docker compose up -d --force-recreate` |
-| Atualizar o código | `bash scripts/vps-backup.sh`, substituir os arquivos, `docker compose up -d --build` |
+| Trocar a senha master | gerar novo hash, trocar `MASTER_PASSWORD_HASH` no `.env`, `chown 1000:1000 .env`, `docker compose up -d --force-recreate` |
+| Trocar o login master | mudar `MASTER_LOGIN`, `chown 1000:1000 .env`, `docker compose up -d --force-recreate` |
 
-> Sempre que editar o `.env`, use `--force-recreate`: um simples `restart` pode continuar lendo a versão antiga do arquivo.
+Trocar login ou senha master derruba as sessões abertas. Sempre que editar o `.env`, use `--force-recreate`.
 
 ## Riscos e limitações
 
-- **Servidor de execução:** o sistema roda no workerd (o mesmo runtime da Cloudflare) por meio do Wrangler em modo local, em um único processo. Atende com folga o volume de um evento (centenas de inscrições), mas não é feito para picos de milhares de acessos simultâneos.
-- **Ponto único de falha:** se a VPS cair, o site cai. O Docker reinicia o sistema sozinho após quedas ou reinícios da VPS.
-- **Envio de avisos:** continua manual pelo WhatsApp, como no original.
+- Roda no workerd (runtime da Cloudflare) via Wrangler em modo local, em um único processo: atende com folga um evento de centenas de inscrições, não picos de milhares de acessos simultâneos.
+- Se a VPS cair, o site cai. O Docker reinicia o sistema sozinho após quedas ou reinícios da VPS.
+- Avisos pelo WhatsApp continuam manuais, como no original.
