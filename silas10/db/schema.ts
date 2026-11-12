@@ -1,4 +1,4 @@
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const guardians = sqliteTable("guardians", {
   id: text("id").primaryKey(),
@@ -85,17 +85,18 @@ export const guestSessions = sqliteTable("guest_sessions", {
   createdAt: integer("created_at").notNull(),
   expiresAt: integer("expires_at").notNull(),
 });
-export const ownerSessions = sqliteTable("owner_sessions", {
-  tokenHash: text("token_hash").primaryKey(),
-  credential: text("credential").notNull(),
-  createdAt: integer("created_at").notNull(),
-  expiresAt: integer("expires_at").notNull(),
-});
 export const guestLoginAttempts = sqliteTable("guest_login_attempts", {
   key: text("key").primaryKey(),
   failures: integer("failures").notNull().default(0),
   windowStarted: integer("window_started").notNull(),
 });
+
+export const masterSessions = sqliteTable("master_sessions", {
+  tokenHash: text("token_hash").primaryKey(),
+  credentialFingerprint: text("credential_fingerprint").notNull(),
+  createdAt: integer("created_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+}, table => [index("master_sessions_expiry_idx").on(table.expiresAt)]);
 
 export const eventBrands = sqliteTable("event_brands", {
   id: text("id").primaryKey(),

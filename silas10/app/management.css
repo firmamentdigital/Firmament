@@ -1,0 +1,137 @@
+/* Keep management tables readable on phones without turning rows into cards. */
+.management-main { max-width: 1480px; }
+.management-title h1 { font-size: clamp(28px, 3vw, 40px); }
+.management-main .operations-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.management-main .operations-nav button { min-height: 60px; font-size: 14px; }
+.management-main .operations-nav button span { max-width: none; }
+.management-main .operations-nav button[aria-current="page"] { background: #fff; color: #b71830; box-shadow: 0 2px 9px #24201c0b; }
+.management-main .list-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 16px; padding: 20px 24px; }
+.management-main .search-field { max-width: none; flex: 1 1 280px; min-height: 48px; }
+.management-main .search-field input { font-size: 14px; min-width: 0; }
+.management-main .list-filters { display: flex; gap: 12px; flex-wrap: wrap; }
+.management-main .list-filters > label, .management-main .family-status-filter { display: grid; gap: 6px; color: #68625b; font-size: 11px; font-weight: 700; margin: 0; }
+.management-main .list-filters select, .management-main .family-status-filter select { min-height: 44px; max-width: none; width: 100%; border: 1px solid #ded9d3; border-radius: 9px; background: #fff; padding: 9px 30px 9px 11px; font: 600 12px Manrope, sans-serif; color: #312e2a; }
+.management-main .list-filters select:disabled { color: #918980; background: #f4f2ef; }
+.management-main .list-description { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 14px 24px; border-top: 1px solid #ece7e1; background: #fcfbf9; }
+.list-description h2 { margin: 0; font-size: 17px; letter-spacing: -.4px; }
+.list-description p { margin: 0; color: #777067; font-size: 12px; line-height: 1.7; }
+.table-scroll-hint { margin: 0; padding: 12px 24px; color: #766f68; font-size: 12px; line-height: 1.7; }
+.management-table-shell { width: 100%; max-height: 670px; overflow: auto; overscroll-behavior-x: contain; border-top: 1px solid #e6e1db; scrollbar-color: #b6aea5 #f4f1ed; scrollbar-width: auto; }
+.management-table-shell:focus-visible { outline: 3px solid #e8a4af; outline-offset: -3px; }
+.management-data-table { width: 100%; min-width: 1160px; border-collapse: separate; border-spacing: 0; table-layout: auto; font-size: 13px; line-height: 1.6; }
+.management-data-table th, .management-data-table td { padding: 18px 16px; border-bottom: 1px solid #ede9e4; text-align: left; vertical-align: middle; background: #fff; }
+.management-data-table thead th { position: sticky; top: 0; z-index: 3; background: #f4f1ed; color: #70675e; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .6px; white-space: nowrap; }
+.management-data-table tbody th { font-weight: 400; }
+.management-data-table tbody tr:last-child > * { border-bottom: 0; }
+.management-data-table tbody tr:nth-child(even) > * { background: #fdfcfb; }
+.management-data-table tbody tr:hover > * { background: #faf5f2; }
+.management-data-table strong { font-size: 13px; font-weight: 800; color: #252323; }
+.management-data-table small { display: block; margin-top: 4px; color: #84796d; font-size: 11px; line-height: 1.6; }
+.management-data-table .table-person { position: sticky; left: 0; z-index: 2; min-width: 200px; max-width: 260px; box-shadow: 1px 0 #eee7df; }
+.management-data-table thead th:first-child { position: sticky; left: 0; z-index: 4; }
+.management-data-table .table-person strong { display: block; overflow-wrap: anywhere; }
+.table-linked { min-width: 180px; max-width: 250px; }
+.table-linked > span { display: block; overflow-wrap: anywhere; }
+.table-phone { white-space: nowrap; }
+.table-phone a { display: block; color: #403931; font-size: 12px; text-decoration: none; padding: 5px 0; }
+.table-phone a:hover { color: #bc1730; text-decoration: underline; }
+.table-affiliation { display: inline-block; color: #9b2034; font-size: 11px; font-weight: 700; padding: 5px 8px; background: #fff0f2; border-radius: 6px; min-width: 70px; }
+.table-affiliation.muted { color: #746c63; background: #f1eee9; }
+.table-presence-button { min-height: 42px; display: inline-flex; align-items: center; gap: 7px; padding: 9px 11px; color: #50473f; border: 1px solid #dcd4cb; border-radius: 8px; background: #fff; font: 700 11px Manrope, sans-serif; white-space: nowrap; cursor: pointer; }
+.table-presence-button:hover { background: #f6f3ef; border-color: #9b9187; }
+.table-presence-button:disabled { opacity: .55; cursor: wait; }
+.table-presence-button.checked { color: #256442; background: #edf7f0; border-color: #c8e0d0; }
+.table-check-box { height: 15px; width: 15px; border: 1px solid #baaea1; border-radius: 4px; }
+.table-entry-time { padding-left: 2px; }
+.table-actions { min-width: 140px; }
+.table-family-code { font-size: 10px !important; letter-spacing: .2px; font-weight: 800; color: #827265; white-space: nowrap; }
+.table-edit-button { min-height: 42px; padding: 6px 0; display: flex; gap: 5px; align-items: center; font: 800 12px Manrope, sans-serif; color: #b91832; border: 0; background: transparent; white-space: nowrap; cursor: pointer; }
+.table-edit-button:hover { text-decoration: underline; }
+.table-actions select { width: 140px; max-width: 100%; padding: 8px; font: 11px Manrope, sans-serif; border: 1px solid #ded6cd; border-radius: 7px; background: #fff; }
+.table-observation { display: flex; align-items: center; gap: 5px; color: #96702e; font-size: 10px; white-space: nowrap; }
+.table-children { min-width: 230px; }
+.table-children > div + div { margin-top: 12px; padding-top: 10px; border-top: 1px solid #ede7df; }
+.table-children strong { display: block; }
+.management-data-table .table-cancelled > * { background: #f6f4f1; }
+.table-cancelled .table-person strong { color: #90857a; }
+.management-main .list-footer { padding: 16px 24px; font-size: 12px; }
+.management-main .list-footer .icon-button { min-width: 42px; min-height: 42px; }
+.management-main .management-tabs button { min-height: 55px; font-size: 13px; }
+.management-main .refresh-button { min-height: 44px; font-size: 12px; }
+.admin-entry-link { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 13px; border: 1px solid #e2dcd5; border-radius: 8px; color: #63594f; font-size: 12px !important; }
+.admin-access-card .owner-login-choice { margin-top: 22px; min-height: 54px; justify-content: center; font-size: 14px; }
+.admin-login-help { display: block; margin: 10px 0 0; color: #847970; font-size: 11px; line-height: 1.7; text-align: center; }
+.admin-account-notice { background: #fff6e9; border: 1px solid #f0dfc6; color: #855d28; border-radius: 10px; padding: 14px; margin-top: 18px; font-size: 12px; line-height: 1.8; }
+.admin-access-divider { display: flex; align-items: center; gap: 10px; color: #988a7e; font-size: 11px; margin: 25px 0 18px; }
+.admin-access-divider::before, .admin-access-divider::after { content: ""; flex: 1; height: 1px; background: #e9e1d8; }
+.admin-switch-account { margin: 10px auto 0; font-size: 12px; }
+.site-footer .admin-entry-link { width: auto; min-height: 32px; border: 0; padding: 6px 8px; margin-left: auto; background: transparent; color: #a19489; font-size: 10px !important; font-weight: 700; letter-spacing: 1px; }
+.site-footer .admin-entry-link:hover { color: #66584c; text-decoration: underline; }
+.master-access-card .eyebrow { display: block; margin-top: 18px; }
+.master-access-card h1 { font-size: 29px; line-height: 1.3; }
+.master-login-form .field > span { display: block; font-size: 12px; font-weight: 700; margin-bottom: 8px; color: #3c3430; }
+.master-login-form .field input { width: 100%; min-height: 50px; font-size: 16px; }
+.master-login-form .field { display: block; margin-bottom: 18px; }
+.master-remember { align-items: flex-start; margin: 20px 0; font-size: 12px; line-height: 1.5; cursor: pointer; }
+.master-remember input { width: 20px; height: 20px; flex-shrink: 0; accent-color: #c71934; }
+.master-remember small { display: block; font-size: 11px; color: #8b7c70; margin-top: 5px; }
+.brand-group[aria-label="Apoiadores do evento"] .brand-logos img { max-width: 220px !important; width: 190px !important; height: 82px !important; object-fit: contain; }
+.compact-brands .brand-group[aria-label="Apoiadores do evento"] .brand-logos img { max-width: 175px !important; width: 175px !important; height: 70px !important; }
+.brand-logos img.silas-realizer-logo { filter: brightness(0); }
+.event-support-footer .footer-support { flex: 1; min-width: 0; flex-wrap: wrap; gap: 20px; }
+.event-support-footer .event-brands { max-width: 100%; }
+.event-brands .brand-group { max-width: 100%; }
+.compact-brands { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.compact-brands .brand-group { width: 100%; min-width: 0; }
+.compact-brands .brand-logos { justify-content: center; gap: 16px; }
+.compact-brands .brand-group[aria-label="Realizadores do evento"] .brand-logos img { max-width: calc((100% - 32px) / 3) !important; height: 64px !important; }
+.compact-brands .brand-group[aria-label="Apoiadores do evento"] .brand-logos img { max-width: calc((100% - 16px) / 2) !important; width: 160px !important; height: 64px !important; }
+@media (max-width: 1000px) {
+  .management-main .list-toolbar { align-items: stretch; }
+  .management-main .search-field { flex-basis: 100%; }
+  .management-main .list-filters { width: 100%; }
+  .management-main .list-filters > label { flex: 1; min-width: 145px; }
+}
+@media (max-width: 800px) {
+  .event-support-footer .brand-group { width: 100%; }
+  .event-support-footer .brand-logos { padding: 14px; gap: 14px; justify-content: center; }
+  .event-support-footer .brand-group[aria-label="Realizadores do evento"] .brand-logos img { max-width: calc((100% - 28px) / 3) !important; height: 72px !important; }
+  .event-support-footer .brand-group[aria-label="Apoiadores do evento"] .brand-logos img { max-width: calc((100% - 14px) / 2) !important; width: 160px !important; height: 64px !important; }
+  .management-main .operations-nav { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 5px; top: 0; }
+  .management-main .operations-nav button { min-height: 48px; padding: 9px; gap: 8px; flex-direction: row; font-size: 12px; }
+  .management-main .operations-nav button svg { width: 17px; height: 17px; flex-shrink: 0; }
+  .management-main .management-title p { font-size: 13px; }
+  .management-main .stat-card > span { font-size: 11px; }
+  .management-main .stat-card small { font-size: 10px; }
+  .management-main .list-topline { padding: 0 15px; align-items: center; gap: 10px; }
+  .management-main .management-tabs { gap: 16px; }
+  .management-main .management-tabs button { font-size: 12px; }
+  .management-main .refresh-button { font-size: 0; }
+  .management-main .list-toolbar { padding: 16px; gap: 13px; }
+  .management-main .list-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .management-main .list-filters > label { min-width: 0; }
+  .management-main .list-filters > label:last-child { grid-column: 1 / -1; }
+  .management-main .list-filters select, .management-main .family-status-filter select { min-height: 46px; font-size: 13px; }
+  .management-main .family-status-filter { width: 100%; }
+  .management-main .search-field input { font-size: 16px; }
+  .management-main .list-description { padding: 15px 16px; }
+  .list-description h2 { font-size: 16px; }
+  .list-description p { font-size: 11px; }
+  .table-scroll-hint { padding: 12px 16px; font-size: 11px; }
+  .management-table-shell { max-height: 570px; }
+  .management-data-table { min-width: 1090px; }
+  .management-data-table th, .management-data-table td { padding: 15px 13px; }
+  .management-data-table .table-person { min-width: 180px; max-width: 200px; }
+  .management-data-table strong { font-size: 12px; }
+  .management-main .list-footer { font-size: 11px; padding: 14px 16px; }
+  .event-support-footer { gap: 20px; }
+  .admin-entry-link { width: 100%; font-size: 12px !important; }
+}
+@media print {
+  .table-scroll-hint, .table-edit-button, .table-presence-button, .operations-nav { display: none !important; }
+  .management-table-shell { max-height: none; overflow: visible; }
+  .management-data-table { min-width: 0; font-size: 9px; }
+  .management-data-table th, .management-data-table td { position: static !important; padding: 7px; font-size: 9px; }
+  .management-data-table strong, .management-data-table small { font-size: 9px; }
+  .management-data-table thead { display: table-header-group; }
+}

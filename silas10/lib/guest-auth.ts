@@ -17,13 +17,12 @@ function tokenFromCookie(cookie: string) {
   const production = /(?:^|;\s*)__Host-silas_guest=([a-f0-9]{64})(?:;|$)/.exec(cookie)?.[1];
   return production || (process.env.NODE_ENV !== "production" ? /(?:^|;\s*)silas_guest_local=([a-f0-9]{64})(?:;|$)/.exec(cookie)?.[1] : null) || null;
 }
-export function guestCookieSecure(request: Request) {
+function cookieName(request: Request) {
   const url = new URL(request.url);
-  if (url.protocol === "https:") return true;
-  if (process.env.NODE_ENV !== "production" && ["127.0.0.1", "localhost"].includes(url.hostname)) return false;
+  if (url.protocol === "https:") return "__Host-silas_guest";
+  if (process.env.NODE_ENV !== "production" && ["127.0.0.1", "localhost"].includes(url.hostname)) return "silas_guest_local";
   throw new AppError(400, "Use o endereço seguro do evento para entrar.");
 }
-function cookieName(request: Request) { return guestCookieSecure(request) ? "__Host-silas_guest" : "silas_guest_local"; }
 export function guestCookie(request: Request, token: string, maxAge: number) {
   return `${cookieName(request)}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${maxAge}${new URL(request.url).protocol === "https:" ? "; Secure" : ""}`;
 }

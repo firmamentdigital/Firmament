@@ -4,15 +4,21 @@ import { AppError } from "./http";
 import { DEFAULT_BRANDS, type EventBrand } from "./brand-types";
 
 type Row = { id: string; category: "organizer" | "supporter"; label: string; asset_key: string | null; asset_path: string | null; mime: string | null; sort_order: number; active: number; version: number };
+function brandKey(brand: { category: string; label: string }) {
+  return brand.category + ":" + brand.label.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
 export async function listBrands(includeInactive = false): Promise<EventBrand[]> {
   if (!env.DB) return DEFAULT_BRANDS;
   const rows = (await env.DB.prepare("SELECT id, category, label, asset_key, asset_path, mime, sort_order, active, version FROM event_brands").all<Row>()).results;
   const combined = new Map(DEFAULT_BRANDS.map(brand => [brand.id, brand]));
   rows.forEach(row => combined.set(row.id, { id: row.id, category: row.category, label: row.label, imageUrl: row.asset_path || `/api/brands/${row.id}/image?v=${row.version}`, sortOrder: row.sort_order, active: Boolean(row.active), version: row.version }));
-  return [...combined.values()].filter(brand => includeInactive || brand.active).sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, "pt-BR"));
+  // A brand uploaded in management replaces its bundled fallback, even when
+  // hidden, so the public form and downloaded cards never show both copies.
+  const customKeys = new Set(rows.filter(row => !row.id.startsWith("default-")).map(brandKey));
+  return [...combined.values()].filter(brand => (!brand.id.startsWith("default-") || !customKeys.has(brandKey(brand))) && (includeInactive || brand.active)).sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, "pt-BR"));
 }
 const fields = z.object({ label: z.string().trim().min(2, "Informe o nome da marca.").max(100), category: z.enum(["organizer", "supporter"]), sortOrder: z.coerce.number().int().min(0).max(999) });
-const validId = z.string().regex(/^(?:default-(?:cod|athletics)|[a-f0-9-]{36})$/);
+const validId = z.string().regex(/^(?:default-(?:silas|cod|athletics|bookfair|wmorente)|[a-f0-9-]{36})$/);
 export async function createBrand(form: FormData, userId: string) {
   const input = fields.parse({ label: form.get("label"), category: form.get("category"), sortOrder: form.get("sortOrder") || 30 });
   if ((await listBrands(true)).length >= 30) throw new AppError(422, "O evento aceita até 30 marcas. Edite uma marca existente.");

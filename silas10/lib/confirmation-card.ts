@@ -73,10 +73,10 @@ export async function confirmationCardImage(data: ConfirmationCardData, qrImage:
   ctx.font = "400 22px Manrope"; ctx.fillText("Casos especiais · Mario Ferrari · (11) 94724-8000", 65, y); y += 42;
   for (const group of brandRows) {
     if (!group.indices.length) continue;
-    y += 18; label(group.category === "organizer" ? "REALIZAÇÃO" : "APOIO");
+    y += 18; label(group.category === "organizer" ? "REALIZAÇÃO" : "APOIADORES");
     for (let offset = 0; offset < group.indices.length; offset += 4) {
       const row = group.indices.slice(offset, offset + 4); const cell = 950 / row.length;
-      row.forEach((index, col) => { const logo = logos[index]; const scale = Math.min((cell - 32) / logo.naturalWidth, 115 / logo.naturalHeight); const w = logo.naturalWidth * scale; const h = logo.naturalHeight * scale; ctx.drawImage(logo, 65 + col * cell + (cell - w) / 2, y + (115 - h) / 2, w, h); });
+      row.forEach((index, col) => { const logo = logos[index]; const scale = Math.min((cell - 32) / logo.naturalWidth, 115 / logo.naturalHeight); const w = logo.naturalWidth * scale; const h = logo.naturalHeight * scale; ctx.drawImage(active[index].id === "default-silas" ? mark : logo, 65 + col * cell + (cell - w) / 2, y + (115 - h) / 2, w, h); });
       y += 140;
     }
   }

@@ -28,7 +28,7 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   const [guardian, setGuardian] = useState<GuardianInput>(primary());
   const [phone, setPhone] = useState("");
   const [question, setQuestion] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
+  const [confirmed, setConfirmed] = useState(true);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [receipt, setReceipt] = useState<RegistrationReceipt | null>(null);
@@ -98,7 +98,7 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   }
   function reset() {
     setGuardian(primary()); setChildren([newChild()]); setPhone(""); setQuestion("");
-    setConfirmed(false); setReceipt(null); setCardDetails(null); setError(""); setStep(0); request.current = null;
+    setConfirmed(true); setReceipt(null); setCardDetails(null); setError(""); setStep(0); request.current = null;
     try { sessionStorage.removeItem(receiptStorage); } catch { /* No stored card. */ }
     onConfirmationChange(false);
     requestAnimationFrame(() => document.getElementById("inscricao")?.scrollIntoView({ block: "start" }));

@@ -17,6 +17,9 @@ const DB={prepare:statement,async batch(statements){sqlite.exec('BEGIN');try{con
 globalThis.__silasTestEnv={DB,OWNER_EMAIL:'owner@example.test'};globalThis.__silasTestUser=null;globalThis.__silasTestCookie="";
 const objects=new Map();globalThis.__silasTestEnv.BUCKET={async put(key,bytes,meta){objects.set(key,{bytes,meta});},async delete(key){objects.delete(key);},async get(key){const o=objects.get(key);return o?{body:o.bytes,writeHttpMetadata(headers){headers.set('Content-Type',o.meta.httpMetadata.contentType);}}:null;}};
 const entry=`export {registerFamily} from './lib/registrations';
+export {hashPassword,secretHash} from './lib/guest-password';
+export * as masterLoginRoute from './app/api/master/login/route';
+export * as masterLogoutRoute from './app/api/master/logout/route';
 export {getEventSnapshot,snapshotCsv} from './lib/snapshot';
 export {requireAdmin} from './lib/admin';
 export {buildRegistrationXlsx} from './lib/export-xlsx';
@@ -178,13 +181,21 @@ globalThis.__silasTestUser=owner;check((await app.requireAdmin()).authMethod==='
 // Real image uploads are public event branding; configuration remains private.
 const brandForm=new FormData();brandForm.set('label','Apoiador Teste');brandForm.set('category','supporter');brandForm.set('sortOrder','30');brandForm.set('image',new File([png],'logo.png',{type:'image/png'}));
 response=await app.brandsRoute.POST(new Request('https://example.test/api/admin/brands',{method:'POST',headers:{origin:'https://example.test'},body:brandForm}));check(response.status===201,'Brand uploaded through protected route');
-let brands=await response.json();const brand=brands.find(b=>b.label==='Apoiador Teste');check(brands.filter(b=>b.category==='organizer').length===2,'Existing COD and athletics marks are realizers');
+let brands=await response.json();const brand=brands.find(b=>b.label==='Apoiador Teste');check(brands.filter(b=>b.category==='organizer').length===3,'Silas, COD and athletics are realizers');
+const bookfair=brands.find(b=>b.id==='default-bookfair');check(bookfair?.active&&bookfair.category==='supporter'&&bookfair.imageUrl==='/assets/bookfair-logo.png','Official BookFair mark is included as a default supporter');
+response=await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+bookfair.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...bookfair,active:false})}),{params:Promise.resolve({id:bookfair.id})});check(response.ok,'Default BookFair supporter remains editable in management');
+check(!(await (await app.publicBrandsRoute.GET()).json()).some(b=>b.id===bookfair.id),'Public branding respects the BookFair visibility setting');
+const updatedBookfair=(await response.json()).find(b=>b.id===bookfair.id);
+response=await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+bookfair.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...updatedBookfair,active:true})}),{params:Promise.resolve({id:bookfair.id})});check(response.ok&&(await response.json()).find(b=>b.id===bookfair.id)?.active,'BookFair can be restored without duplicating the brand');
 globalThis.__silasTestUser=null;check((await (await app.publicBrandsRoute.GET()).json()).some(b=>b.id===brand.id),'Public form can load active brand metadata');
 check((await app.publicBrandImageRoute.GET(get('/api/brands/'+brand.id+'/image'),{params:Promise.resolve({id:brand.id})})).headers.get('content-type')==='image/png','Public card can load its brand image');globalThis.__silasTestUser=owner;
 response=await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+brand.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...brand,active:false})}),{params:Promise.resolve({id:brand.id})});check(response.ok,'Brand can be hidden');
 check(!(await (await app.publicBrandsRoute.GET()).json()).some(b=>b.id===brand.id),'Hidden brands disappear from public form and next cards');
 response=await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+brand.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...brand,active:true})}),{params:Promise.resolve({id:brand.id})});check(response.status===409,'Stale brand edit cannot overwrite a newer setting');
 const invalidBrand=new FormData();invalidBrand.set('label','Inválida');invalidBrand.set('category','supporter');invalidBrand.set('image',new File(['<svg onload="alert(1)"></svg>'],'fake.png',{type:'image/png'}));check((await app.brandsRoute.POST(new Request('https://example.test/api/admin/brands',{method:'POST',headers:{origin:'https://example.test'},body:invalidBrand}))).status===422,'HTML/SVG disguised as a logo is rejected');
+const bookfairUpload=new FormData();bookfairUpload.set('label','Book Fair');bookfairUpload.set('category','supporter');bookfairUpload.set('sortOrder','30');bookfairUpload.set('image',new File([png],'bookfair.png',{type:'image/png'}));
+response=await app.brandsRoute.POST(new Request('https://example.test/api/admin/brands',{method:'POST',headers:{origin:'https://example.test'},body:bookfairUpload}));const customBookfair=(await response.json()).filter(b=>b.label.replace(/\s/g,'').toLowerCase()==='bookfair');check(response.ok&&customBookfair.length===1&&customBookfair[0].id!=='default-bookfair','A managed BookFair logo replaces the bundled fallback without duplication');
+response=await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+customBookfair[0].id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...customBookfair[0],active:false})}),{params:Promise.resolve({id:customBookfair[0].id})});check(response.ok&&!(await (await app.publicBrandsRoute.GET()).json()).some(b=>b.label.replace(/\s/g,'').toLowerCase()==='bookfair'),'Hiding the managed logo does not reveal its bundled duplicate');
 
 // Masks, invalid calendar dates and the mobile-number contract.
 check(app.maskBirthDate('29022012')==='29/02/2012'&&app.parseBirthDate('29/02/2012')==='2012-02-29','Typed Brazilian dates mask and convert to ISO');
@@ -223,5 +234,58 @@ const stress={...snapshot,participants:Array.from({length:65},(_,i)=>({...snapsh
 await writeFile(resolve(work,'roster-stress.xlsx'),app.buildRegistrationXlsx(stress));await writeFile(resolve(work,'roster-stress.pdf'),await app.buildRegistrationPdf(stress));
 // A direct route check includes the real stored image ID after logout.
 globalThis.__silasTestUser=null;response=await app.imageRoute.GET(get('/api/admin/messages/'+campaign.id+'/image'),{params:Promise.resolve({id:campaign.id})});check(response.status===401,'Stored message image remains inaccessible after sign-out');
-console.log(JSON.stringify({passed:checks,assertions:'authorization, email/password invitations, setup-only sessions, password rotation, throttling, owner-only delegation and deletion, revocation, branding uploads, Brazilian input masks, family registration, rollback, deduplication, QR check-in, cancellation/reactivation, real XLSX/PDF, private images, WhatsApp state',realMessagesSent:0}));
+// The master account is configured only in the server environment.
+const testMasterPassword='MasterTestPassword!678';
+globalThis.__silasTestEnv.MASTER_LOGIN='MasterTest';
+globalThis.__silasTestEnv.MASTER_PASSWORD_HASH=await app.hashPassword(testMasterPassword);
+globalThis.__silasTestUser=null;globalThis.__silasTestCookie='';
+for(const invoke of guarded)check((await invoke()).status===401,'Every administrative route stays restricted without a master or guest session');
+globalThis.__silasTestUser=owner;check((await app.snapshotRoute.GET()).status===401,'Native account identity alone does not bypass the configured master login');globalThis.__silasTestUser=null;
+const masterLogin=(data)=>app.masterLoginRoute.POST(request('/api/master/login',data));
+const masterInput={login:'MasterTest',password:testMasterPassword,remember:false};
+let masterForeign=request('/api/master/login',masterInput);masterForeign.headers.set('origin','https://foreign.test');check((await app.masterLoginRoute.POST(masterForeign)).status===403,'Cross-origin master login is rejected');
+let noOrigin=request('/api/master/login',masterInput);noOrigin.headers.delete('origin');check((await app.masterLoginRoute.POST(noOrigin)).status===403,'Master login requires an origin');
+response=await masterLogin({...masterInput,password:'incorrect'});check(response.status===401&&!response.headers.has('set-cookie'),'Wrong master password never creates a session');
+response=await masterLogin({...masterInput,login:'another-login'});check(response.status===401,'A different login is rejected even with the matching password');
+response=await masterLogin({...masterInput,remember:'yes'});check(response.status===422,'Malformed persistence option is rejected');
+response=await masterLogin(masterInput);check(response.ok,'Configured master can sign in directly without ChatGPT');
+const masterSessionCookie=response.headers.get('set-cookie');const masterCookie=masterSessionCookie.split(';')[0];
+check(masterSessionCookie.includes('__Host-silas_master=')&&masterSessionCookie.includes('HttpOnly')&&masterSessionCookie.includes('Secure')&&masterSessionCookie.includes('SameSite=Lax'),'Master cookie is host-only, HttpOnly and secure, with navigation-compatible SameSite');
+check(!masterSessionCookie.includes('Max-Age'),'Without remember me the browser receives a session cookie');
+const masterToken=masterCookie.split('=')[1];const masterHash=await app.secretHash(masterToken);
+check(!JSON.stringify(sqlite.prepare('SELECT * FROM master_sessions').all()).includes(masterToken),'Only hashes of master session tokens are stored');
+globalThis.__silasTestCookie=masterCookie;
+check((await app.requireAdmin()).role==='owner'&&(await app.requireAdmin()).authMethod==='master','Master has owner permission after server-side session validation');
+check((await app.snapshotRoute.GET()).ok,'Master can access registration data');
+check((await app.accessRoute.GET()).ok,'Master can manage delegated access');
+check((await app.csvRoute.GET()).headers.get('content-type').includes('spreadsheetml'),'Master can export real XLSX');
+check((await app.pdfRoute.GET()).headers.get('content-type')==='application/pdf','Master can export the branded PDF');
+const extraGuest='master-invited@example.test';response=await app.accessRoute.POST(request('/api/admin/access',{email:extraGuest}));check(response.ok,'Master can authorize an invited manager');
+const masterInvitation=(await response.json()).invitation;
+response=await app.guestLoginRoute.POST(request('/api/guest/login',{email:extraGuest,password:'123456',invitation:masterInvitation.token}));check(response.ok,'Existing guest invitations still work alongside master authentication');
+globalThis.__silasTestCookie=response.headers.get('set-cookie').split(';')[0];
+response=await app.guestPasswordRoute.POST(request('/api/guest/password',{password:'NewGuestTestPassword789',confirmation:'NewGuestTestPassword789'}));check(response.ok,'Invited manager can complete password setup');
+const additionalGuestCookie=response.headers.get('set-cookie').split(';')[0];globalThis.__silasTestCookie=additionalGuestCookie;globalThis.__silasTestUser=owner;
+check((await app.requireAdmin()).role==='manager','An invited session is never promoted to master by another native identity');
+check((await app.accessRoute.GET()).status===403,'Invited manager cannot access master-only delegation');
+globalThis.__silasTestUser=null;globalThis.__silasTestCookie='__Host-silas_master='+additionalGuestCookie.split('=')[1];check((await app.snapshotRoute.GET()).status===401,'Guest tokens cannot be relabeled as master tokens');
+globalThis.__silasTestCookie=masterCookie;
+let logoutMaster=request('/api/master/logout',{});logoutMaster.headers.set('cookie',masterCookie);response=await app.masterLogoutRoute.POST(logoutMaster);check(response.ok&&response.headers.get('set-cookie').includes('Max-Age=0'),'Master logout clears the browser cookie');
+check((await app.snapshotRoute.GET()).status===401,'Logged-out master session cannot be replayed');
+response=await masterLogin({...masterInput,remember:true});const rememberedCookie=response.headers.get('set-cookie').split(';')[0];
+check(response.ok&&response.headers.get('set-cookie').includes('Max-Age=2592000'),'Remember me persists the master session for 30 days');
+globalThis.__silasTestCookie=rememberedCookie;check((await app.snapshotRoute.GET()).ok,'Remembered master session works on subsequent requests');
+const rememberedHash=await app.secretHash(rememberedCookie.split('=')[1]);
+sqlite.prepare('UPDATE master_sessions SET expires_at=? WHERE token_hash=?').run(Math.floor(Date.now()/1000)-1,rememberedHash);check((await app.snapshotRoute.GET()).status===401,'Expired remembered session is rejected server-side');
+response=await masterLogin({...masterInput,remember:true});globalThis.__silasTestCookie=response.headers.get('set-cookie').split(';')[0];
+globalThis.__silasTestEnv.MASTER_PASSWORD_HASH=await app.hashPassword('RotatedMasterPassword789');check((await app.snapshotRoute.GET()).status===401,'Credential rotation invalidates all older remembered sessions');
+check((await masterLogin(masterInput)).status===401,'The previous master password stops working after rotation');
+for(let n=0;n<5;n++)check((await masterLogin({login:'unknown-rate-test',password:'wrong',remember:false})).status===401,'Master guessing uses a generic invalid-credential response');
+response=await masterLogin({login:'unknown-rate-test',password:'wrong',remember:false});check(response.status===429&&response.headers.get('retry-after')==='900','Master password guessing is throttled');
+const insecure=new Request('http://example.test/api/master/login',{method:'POST',headers:{origin:'http://example.test','content-type':'application/json'},body:JSON.stringify({...masterInput,password:'RotatedMasterPassword789'})});
+const sessionsBeforeInsecure=sqlite.prepare('SELECT COUNT(*) AS n FROM master_sessions').get().n;
+check((await app.masterLoginRoute.POST(insecure)).status===400&&sqlite.prepare('SELECT COUNT(*) AS n FROM master_sessions').get().n===sessionsBeforeInsecure,'Insecure non-local transport is refused without storing a new session');
+globalThis.__silasTestCookie='';globalThis.__silasTestUser=null;
+
+console.log(JSON.stringify({passed:checks,assertions:'master login, remembered 30-day sessions, logout, credential rotation, master/guest separation, authorization, email/password invitations, setup-only sessions, password rotation, throttling, owner-only delegation and deletion, revocation, branding uploads, Brazilian input masks, family registration, rollback, deduplication, QR check-in, cancellation/reactivation, real XLSX/PDF, private images, WhatsApp state',realMessagesSent:0}));
 sqlite.close();await rm(resolve(work,'server.mjs'));

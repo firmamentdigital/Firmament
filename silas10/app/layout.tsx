@@ -4,6 +4,7 @@ import "./registration.css";
 import "./operations.css";
 import "./child-flow.css";
 import "./refinements.css";
+import "./management.css";
 
 export const metadata: Metadata = {
   title: "Silas 10 · Reserve sua vaga",

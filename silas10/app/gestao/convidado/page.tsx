@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { chatGPTSignInPath } from "@/app/chatgpt-auth";
 import { readGuestSession } from "@/lib/guest-auth";
 import GuestLogin from "./guest-login";
 export const dynamic = "force-dynamic";
@@ -11,5 +10,5 @@ export default async function GuestLoginPage({ searchParams }: { searchParams: P
   const returnTo = code ? "/gestao?inscricao=" + encodeURIComponent(code) : "/gestao";
   const session = await readGuestSession();
   if (session?.phase === "ready") redirect(returnTo);
-  return <GuestLogin initialEmail={session?.email || email} initialSetup={session?.phase === "setup"} returnTo={returnTo} ownerPath={chatGPTSignInPath(returnTo)} />;
+  return <GuestLogin initialEmail={session?.email || email} initialSetup={session?.phase === "setup"} returnTo={returnTo} ownerPath={returnTo} />;
 }

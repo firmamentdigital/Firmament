@@ -1,14 +1,14 @@
 {
-  "projeto": "Silas 10 — Inscrições e presença",
-  "versao": 10,
-  "commit_origem": "74c8cf916ce449e111265200a284156f1cf096b8",
-  "data_exportacao": "2026-11-11",
-  "tipo": "codigo-fonte-sem-dados-de-producao",
-  "arquivos_originais": 195,
-  "adicoes_do_pacote": [
+  "projeto": "Silas 10 - Inscricoes e presenca",
+  "versao": 15,
+  "commit_origem": "e13befb7265ec3e2b9c8b9b2b64a93cf0fa5550d",
+  "data_exportacao": "2026-11-12",
+  "arquivos_originais": 205,
+  "adicoes": [
     "LEIA-ME-PRIMEIRO.md",
     ".dev.vars.example",
     "EXPORTACAO.json",
     "SHA256SUMS.txt"
-  ]
+  ],
+  "dados_de_producao_incluidos": false
 }

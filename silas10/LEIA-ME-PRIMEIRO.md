@@ -1,74 +1,68 @@
-# Silas 10 — código-fonte completo
+# Silas 10 — Código-fonte completo · versão 15
 
-Exportação da **versão 10**, publicada em 11/11/2026, do sistema de inscrições e presença do evento Silas 10 — Como realizar seu sonho / Da origem ao sucesso.
+Pacote da versão atual publicada em 12/11/2026. O código original foi preservado integralmente.
 
-## Comece aqui
+## Conteúdo
 
-Este pacote permite entregar o projeto a um desenvolvedor. Inclui o formulário público, a gestão, as imagens e logomarcas do repositório, os scripts de criação do banco, as dependências travadas e os testes de integração.
+- Formulário em três etapas: Criança → Responsável → Confirmação.
+- Um responsável por criança, com várias crianças vinculadas sem duplicação do responsável.
+- Card de confirmação com participantes e QR Code, para baixar e compartilhar.
+- Painel de gestão com tabelas, busca, filtros, presença e edição das inscrições.
+- Exportações XLSX e PDF; avisos com texto/imagem e abertura do WhatsApp para envio manual.
+- Acesso master por login e senha, opção de sessão persistente de até 30 dias e saída com revogação da sessão.
+- Convidados por e-mail e senha, com permissões limitadas e troca de senha no primeiro acesso.
+- Realização: Silas 10, COD e Escola de Atletismo. Apoiadores: BookFair e WMorente.
+- Artes, fontes, logomarcas, scripts, migrações SQL, testes e versões travadas das dependências.
 
-O sistema utiliza **React + TypeScript + Vinext/Vite**, com servidor em **Cloudflare Workers**, banco **Cloudflare D1** e arquivos em **Cloudflare R2**. É uma aplicação com servidor e banco de dados. Copiar a pasta para uma hospedagem comum não ativa inscrições, gestão ou autenticação.
+## Tecnologia
 
-Foi desenvolvido para **ChatGPT Sites**. Uma implantação independente exige configurar o ambiente e adaptar a autenticação do proprietário. O serviço de login pelo ChatGPT da hospedagem original não acompanha o ZIP como serviço independente.
+React, TypeScript, Vinext/Vite, Cloudflare Workers, Cloudflare D1 e Cloudflare R2.
 
-## Funcionalidades incluídas
+É uma aplicação com servidor e banco: não basta enviar os arquivos a uma hospedagem estática. Para outra infraestrutura, configure um Worker compatível ou adapte as integrações de banco e armazenamento.
 
-- Fluxo de inscrição **Criança → Responsável → Confirmação**.
-- Um responsável por criança, com várias crianças por responsável sem duplicação.
-- Vínculo da criança com Sócio COD ou Escola de Atletismo.
-- Digitação da data de nascimento, idade calculada e máscara de celular.
-- Card de confirmação com participantes e QR Code.
-- Gestão com permissões de proprietário e convidados.
-- Convites individuais e troca obrigatória da senha no primeiro acesso.
-- Consulta, cancelamento, reativação e exclusão conforme as permissões.
-- Confirmação de presença individual ou por família, inclusive leitura do QR Code.
-- Exportações em **XLSX** e **PDF**.
-- Cadastro de realizadores e apoiadores.
-- Preparação de avisos com texto/imagem e abertura do WhatsApp para envio manual. Não inclui disparo automático em massa ou serviço de envio de e-mail.
+O acesso master por login e senha funciona independentemente do login do ChatGPT, quando as variáveis master estão configuradas. A compatibilidade com a autenticação original da plataforma continua no código; configure o acesso master antes de disponibilizar uma implantação independente.
 
-## Configuração necessária
+## Configuração do servidor
 
-| Recurso | Configuração |
+| Recurso | Nome/configuração |
 | --- | --- |
-| Servidor | Cloudflare Workers e build Vinext |
-| Banco | Binding D1 `DB` e migrações de `drizzle/` em ordem |
-| Arquivos | Binding R2 `BUCKET` |
-| Proprietário | Variável `OWNER_EMAIL` com um único e-mail autorizado |
-| Identidade | Integração confiável de autenticação do proprietário |
-| Domínio | DNS e HTTPS na hospedagem escolhida |
+| Banco Cloudflare D1 | Binding `DB` |
+| Arquivos Cloudflare R2 | Binding `BUCKET` |
+| Proprietário | `OWNER_EMAIL` com um único e-mail autorizado |
+| Login master | `MASTER_LOGIN` |
+| Hash da senha master | `MASTER_PASSWORD_HASH` |
 
-`.openai/hosting.json` identifica o Site original. Preserve essa identidade apenas para manter o mesmo Site. Uma cópia independente precisa de novo ambiente e novos recursos de armazenamento.
+As credenciais reais são configuradas no ambiente da hospedagem e não acompanham este pacote. Gere o hash utilizando `hashPassword` de `lib/guest-password.ts` em um ambiente seguro e configure o resultado como segredo do servidor. Não use uma senha em texto puro em `MASTER_PASSWORD_HASH` e não publique arquivos com credenciais.
 
-### Autenticação ao migrar
+A alteração do login ou do hash invalida as sessões master anteriores. A opção de manter conectado emite uma sessão de até 30 dias. Sem essa opção, o cookie é de sessão e a validade do lado do servidor é de 8 horas.
 
-`app/chatgpt-auth.ts` lê cabeçalhos de identidade inseridos pela plataforma original. Em outra hospedagem, esses cabeçalhos não podem ser aceitos diretamente do visitante: devem ser validados por uma camada confiável ou substituídos por uma sessão autenticada. Mantenha a gestão bloqueada até concluir essa integração.
-
-Convidados precisam de autorização do proprietário. O primeiro acesso combina um link individual e senha inicial `123456`, seguido de troca obrigatória de senha. O pacote não contém convites, contas ou credenciais reais.
+`.openai/hosting.json` contém a identidade do Site original. Preserve-a para manter o mesmo Site; uma implantação independente precisa de projeto, banco e armazenamento próprios.
 
 ## Desenvolvimento local
 
-Recomendado: **Node.js 24 LTS** e npm. O projeto aceita Node >= 22.13; os testes utilizam `node:sqlite` e foram executados com Node 24.
+Recomendado: Node.js 24 LTS e npm. O projeto declara Node >=22.13; os testes usam `node:sqlite` e foram executados com Node 24.
 
-1. Extraia o ZIP e abra o terminal na pasta do projeto.
-2. Instale as versões travadas das dependências:
+1. Extraia a pasta e abra um terminal nela.
+2. Instale as versões travadas:
 
 ```sh
 npm run install:ci
 ```
 
-3. Copie `.dev.vars.example` para `.dev.vars`. Para testar a gestão no perfil local portátil, use `OWNER_EMAIL="seedy@sites.test"`. Esse e-mail identifica uma simulação local; em produção configure o e-mail real autorizado.
-4. Gere o build e a configuração do Worker local:
+3. Copie `.dev.vars.example` para `.dev.vars` e configure os valores do seu ambiente, incluindo o hash da senha.
+4. Gere o build e a configuração local do Worker:
 
 ```sh
 npm run build
 ```
 
-5. Aplique cada arquivo `.sql` de `drizzle/` em ordem numérica em um banco local novo. Para cada arquivo, substitua `ARQUIVO.sql` no comando abaixo pelo nome exato. Não repita migrações já aplicadas:
+5. Em um banco local novo, aplique os arquivos SQL de `drizzle/` na ordem abaixo. Substitua `ARQUIVO.sql` pelo nome de cada arquivo no comando. Não repita migrações já aplicadas:
 
 ```sh
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/ARQUIVO.sql
 ```
 
-Ordem dos arquivos:
+Ordem:
 
 1. `0000_silly_senator_kelly.sql`
 2. `0001_child_guardian_limits.sql`
@@ -77,52 +71,48 @@ Ordem dos arquivos:
 5. `0004_great_bulldozer.sql`
 6. `0005_late_omega_red.sql`
 7. `0006_clear_wither.sql`
+8. `0007_tan_jigsaw.sql`
 
-6. Inicie o servidor:
+6. Inicie o desenvolvimento:
 
 ```sh
 npm run dev
 ```
 
-Use a URL informada no terminal, normalmente `http://localhost:5173`. No perfil local portátil, abra `/signin-with-chatgpt?return_to=/gestao` nessa mesma origem para utilizar a identidade simulada de desenvolvimento.
+Use a URL informada no terminal, normalmente `http://localhost:5173`. A área administrativa fica em `/gestao`.
 
-## Verificações
+## Verificação
 
 ```sh
 npx tsc --noEmit
 node tests/server.integration.mjs
+npm run build
 ```
 
-Os testes usam banco em memória e geram arquivos temporários em `work/server-test/`. Não acessam as inscrições reais. `npm run build` gera os arquivos de implantação em `dist/`.
+Os testes utilizam dados fictícios e banco em memória. Não acessam as inscrições reais. Os arquivos temporários de teste ficam em `work/` e os arquivos de build em `dist/`.
 
 ## Mapa do projeto
 
-| Caminho | Conteúdo |
+| Caminho | Finalidade |
 | --- | --- |
-| `app/` | Páginas, formulário, confirmação, gestão e APIs |
-| `lib/` | Regras, acesso, presença, avisos e exportações |
-| `public/assets/` | Artes, fontes e logomarcas do repositório |
-| `db/` | Esquema e integração D1/Drizzle |
-| `drizzle/` | Sete migrações e histórico do esquema |
+| `app/` | Formulário, card, gestão, telas de acesso e APIs |
+| `lib/` | Regras, autenticação, sessões, presença, marcas e exportações |
+| `db/` | Esquema e integração com o banco |
+| `drizzle/` | Oito migrações SQL e histórico do esquema |
+| `public/assets/` | Artes, logomarcas e fontes |
 | `worker/` | Entrada do servidor |
-| `scripts/` | Instalação, build e integrações locais |
+| `scripts/` | Instalação, build e integrações do ambiente |
 | `tests/` | Testes de integração |
-| `package.json` / `package-lock.json` | Dependências e versões |
-| `README.md` | Documentação técnica original |
-| `EXPORTACAO.json` | Identificação da versão exportada |
-| `SHA256SUMS.txt` | Integridade dos arquivos |
+| `README.md` | Documentação técnica original do ambiente |
+| `EXPORTACAO.json` | Versão e origem do código |
+| `SHA256SUMS.txt` | Integridade dos arquivos, exceto o próprio arquivo de hashes |
 
-## Conteúdo de produção
+## Limites do pacote
 
-Este é um pacote de **código-fonte**, não um backup operacional. Não contém inscritos reais, dados pessoais dos participantes, senhas de usuários, sessões, chaves privadas, tokens, banco de produção nem uploads armazenados no R2. As artes incluídas são as presentes no repositório; apoiadores ou imagens enviados pela gestão em produção precisam de migração separada.
+Este ZIP contém o código-fonte, não um backup da produção. Não inclui inscrições reais, dados pessoais de participantes, senhas de usuários, convites, sessões, chaves, banco de produção ou uploads feitos pelo painel e armazenados no R2. Inclui as artes e logomarcas presentes no repositório; os arquivos enviados pelo painel precisam de migração separada ao transferir o sistema.
 
-Não contém `node_modules`, builds, histórico Git ou configurações locais privadas. As dependências são instaladas pelo comando indicado acima.
+`node_modules`, builds, histórico Git e configurações privadas locais não estão incluídos. Instale as dependências pelo arquivo de versões travadas.
 
-As licenças de componentes e de arquivos de terceiros presentes no código foram preservadas. Este pacote não transfere direitos sobre marcas, fotos ou imagens de terceiros.
+Os avisos de WhatsApp são preparados pelo painel e enviados manualmente; o pacote não inclui um serviço de disparo automático em massa ou envio de e-mails. As licenças presentes no repositório foram preservadas.
 
-## Origem
-
-- Versão: **10**.
-- Commit: `74c8cf916ce449e111265200a284156f1cf096b8`.
-- Exportação: **11/11/2026**.
-- O código original foi preservado. Foram adicionados apenas este guia, um exemplo de configuração sem credenciais reais e os arquivos de identificação e integridade da exportação.
+Versão 15 · 12/11/2026 · commit `e13befb7265ec3e2b9c8b9b2b64a93cf0fa5550d`.
