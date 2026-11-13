@@ -18,7 +18,7 @@ export async function listBrands(includeInactive = false): Promise<EventBrand[]>
   return [...combined.values()].filter(brand => (!brand.id.startsWith("default-") || !customKeys.has(brandKey(brand))) && (includeInactive || brand.active)).sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label, "pt-BR"));
 }
 const fields = z.object({ label: z.string().trim().min(2, "Informe o nome da marca.").max(100), category: z.enum(["organizer", "supporter"]), sortOrder: z.coerce.number().int().min(0).max(999) });
-const validId = z.string().regex(/^(?:default-(?:silas|cod|athletics|bookfair|wmorente)|[a-f0-9-]{36})$/);
+const validId = z.string().regex(/^(?:default-(?:silas|cod|athletics|bookfair|wmorente|firmament)|[a-f0-9-]{36})$/);
 export async function createBrand(form: FormData, userId: string) {
   const input = fields.parse({ label: form.get("label"), category: form.get("category"), sortOrder: form.get("sortOrder") || 30 });
   if ((await listBrands(true)).length >= 30) throw new AppError(422, "O evento aceita até 30 marcas. Edite uma marca existente.");

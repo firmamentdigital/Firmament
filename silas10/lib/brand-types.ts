@@ -8,4 +8,5 @@ export const DEFAULT_BRANDS: EventBrand[] = [
   { id: "default-athletics", category: "organizer", label: "Escola de Atletismo SPFC", imageUrl: "/assets/escola-atletismo-spfc.png", sortOrder: 20, active: true, version: 0 },
   { id: "default-bookfair", category: "supporter", label: "BookFair", imageUrl: "/assets/bookfair-logo.png", sortOrder: 30, active: true, version: 0 },
   { id: "default-wmorente", category: "supporter", label: "WMorente", imageUrl: "/assets/wmorente-logo.png", sortOrder: 40, active: true, version: 0 },
+  { id: "default-firmament", category: "supporter", label: "Firmament", imageUrl: "/assets/firmament-logo.png", sortOrder: 50, active: true, version: 0 },
 ];
