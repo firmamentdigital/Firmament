@@ -47,7 +47,46 @@ certbot --nginx -d silas10.wmorente.com.br --redirect
 
 DNS (Hostinger → Domínios → wmorente.com.br → Registros DNS): tipo **A**, nome `silas10`, apontando para o IP da VPS.
 
-## Atualizar para uma nova versão do código
+## Deploy automático
+
+Depois de instalado, **toda alteração enviada ao GitHub na branch de deploy entra no ar sozinha em até 2 minutos.** Não é preciso acessar a VPS.
+
+Como funciona (`scripts/vps-autodeploy.sh`, rodando pelo cron a cada 2 minutos):
+
+1. Consulta a branch de deploy no GitHub. Sem novidade, sai em silêncio.
+2. Se a novidade não mexe na pasta `silas10/`, só atualiza o código, sem reiniciar.
+3. Monta a nova versão **com a atual ainda no ar**. Se a montagem falhar, nada muda no site.
+4. Faz backup dos dados e troca a versão (alguns segundos de reinício).
+5. Confere a saúde. Se a nova versão cair ou não responder, **volta sozinha para a anterior** (cerca de 10 segundos fora do ar).
+6. Uma versão que falhou não é tentada de novo; o próximo commit é tentado normalmente.
+
+Estrutura na VPS após a instalação:
+
+| Caminho | Conteúdo |
+|---|---|
+| `/opt/firmament` | Repositório gerenciado pelo git |
+| `/opt/silas10` | Atalho para `/opt/firmament/silas10` (`.env` e `backups/` ficam aqui, fora do git) |
+| `/var/log/silas10-autodeploy.log` | Histórico dos deploys |
+
+### Instalação (uma vez)
+
+```bash
+rm -rf /tmp/fm && git clone -q -b claude/practical-fermi-y6yde0 https://github.com/firmamentdigital/Firmament.git /tmp/fm && bash /tmp/fm/silas10/scripts/vps-autodeploy-install.sh
+```
+
+Na primeira execução o instalador cria uma **chave somente leitura** e para, mostrando-a. Cadastre-a no GitHub em **Firmament → Settings → Deploy keys → Add deploy key** (sem marcar "Allow write access") e rode o mesmo comando de novo. A chave continua funcionando mesmo com o repositório privado.
+
+### Acompanhar e controlar
+
+```bash
+tail -n 30 /var/log/silas10-autodeploy.log                 # últimos deploys
+crontab -l | grep vps-autodeploy                            # agendamento ativo
+crontab -l | grep -v vps-autodeploy | crontab -             # PAUSAR o deploy automático
+```
+
+Para reativar depois de pausar, rode o instalador de novo. Em caso de falha, os detalhes ficam em `/tmp/silas10-build.log` (montagem) ou `/tmp/silas10-falha.log` (inicialização).
+
+## Atualização manual (sem deploy automático)
 
 ```bash
 cd /opt/silas10
