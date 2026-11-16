@@ -45,7 +45,6 @@ export default function RegistrationExperience({ brands }: { brands: EventBrand[
         {!confirmed && <BrandDisplay brands={brands} />}
         <span>Um encontro para aprender,<br /><strong>sonhar e dar o próximo passo.</strong></span>
       </div>
-      <a className="admin-entry-link" href="/gestao" target="_blank" rel="noopener noreferrer" title="Acesso administrativo" aria-label="ADM (abre em uma nova aba)">ADM</a>
     </footer>
     <div className="registration-help">
       <MessageCircle size={21} /><div><strong>Dúvidas ou casos especiais?</strong><span>Fale com Mario Ferrari · (11) 94724-8000</span></div>
