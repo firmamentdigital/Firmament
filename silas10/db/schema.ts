@@ -26,6 +26,8 @@ export const familyGuardians = sqliteTable("family_guardians", {
   familyId: text("family_id").notNull().references(() => families.id),
   guardianId: text("guardian_id").notNull().references(() => guardians.id),
   willAttend: integer("will_attend").notNull().default(1),
+  // Celular próprio do segundo responsável. O do responsável principal fica em families.phone.
+  phone: text("phone"),
 }, table => [primaryKey({ columns: [table.familyId, table.guardianId] })]);
 
 export const children = sqliteTable("children", {

@@ -35,3 +35,11 @@
 .table-guardians{min-width:220px}
 .table-guardians>div+div{margin-top:12px;padding-top:10px;border-top:1px solid #ede7df}
 .table-guardians strong{display:block}
+/* Celulares alinhados a cada responsável na tabela por família */
+.table-guardian-phones>div>a,.table-guardian-phones>div>span{display:block}
+.table-guardian-phones>div+div{margin-top:12px;padding-top:10px;border-top:1px solid #ede7df}
+.table-guardian-phones .phone-missing{font-size:12px;color:#b07a2a}
+.detail-person .guardian-phone-link{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;font-weight:700;color:#3f3833;text-decoration:none}
+.detail-person .phone-missing{display:block;margin-top:6px;color:#b07a2a}
+.table-guardian-phones>div>a,.table-guardian-phones>div>span{font-size:13px!important;line-height:1.6!important;padding:0!important;margin:0!important;min-height:0!important}
+.table-guardian-phones>div>small{display:block;font-size:11px;line-height:1.6;margin:4px 0 0;padding:0}

@@ -5,6 +5,8 @@ export type GuardianInput = {
   fullName: string;
   birthDate: string;
   attending: boolean;
+  /** Celular próprio do segundo responsável. */
+  phone?: string;
 };
 
 export type ChildInput = {
@@ -61,6 +63,7 @@ export type FamilyDetail = {
   guardians: {
     id: string; fullName: string; birthDate: string; age: number;
     attending: boolean; checkedInAt: string | null;
+    primary: boolean; phone: string | null;
   }[];
   questions: { text: string; createdAt: string }[];
 };

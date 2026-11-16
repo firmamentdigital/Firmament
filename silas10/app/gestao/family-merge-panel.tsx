@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { GitMerge, LoaderCircle } from "lucide-react";
-import { formatBirthDate } from "@/lib/event";
+import { formatBirthDate, formatPhone } from "@/lib/event";
 import type { MergePlan } from "@/lib/family-merge";
 
 // Painel "Juntar inscrição duplicada", dentro dos detalhes da família (somente proprietário).
@@ -42,7 +42,7 @@ export default function FamilyMergePanel({ keepId, keepCode, onMerged }: { keepI
       <ul>
         {preview.duplicates.map((d, i) => <li key={"d" + i}>Criança repetida: <strong>{d.removed}</strong> é a mesma que <strong>{d.kept}</strong> ({formatBirthDate(d.birthDate)}). Fica só uma ficha.</li>)}
         {preview.moved.map((c, i) => <li key={"m" + i}>Criança que passa para esta inscrição: <strong>{c.fullName}</strong> ({formatBirthDate(c.birthDate)}).</li>)}
-        {preview.addedGuardians.map((g, i) => <li key={"g" + i}>Novo responsável: <strong>{g.fullName}</strong> · {g.attending ? "acompanhará o encontro" : "sem vaga de acompanhante"}.</li>)}
+        {preview.addedGuardians.map((g, i) => <li key={"g" + i}>Novo responsável: <strong>{g.fullName}</strong> · {g.attending ? "acompanhará o encontro" : "sem vaga de acompanhante"}{g.phone ? " · celular " + formatPhone(g.phone) : ""}.</li>)}
         {!preview.addedGuardians.length && <li>Nenhum responsável novo (os mesmos já estão nesta inscrição).</li>}
       </ul>
       <p>Resultado: <strong>{preview.result.children} {preview.result.children === 1 ? "criança" : "crianças"}</strong>, responsáveis <strong>{preview.result.guardians.join(" e ")}</strong>, <strong>{preview.result.people} pessoas</strong> no encontro. O WhatsApp de contato continua o desta inscrição.</p>

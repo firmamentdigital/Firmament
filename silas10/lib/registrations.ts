@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { registrationSchema } from "./validation";
-import { normalizeName } from "./event";
+import { normalizeName, normalizePhone } from "./event";
 import { AppError } from "./http";
 import type { RegistrationReceipt } from "./types";
 
@@ -74,8 +74,9 @@ export async function registerFamily(raw: unknown) {
   statements.push(db.prepare("INSERT INTO families (id, code, primary_guardian_id, phone, created_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING")
     .bind(familyId, code, guardians[0].id, input.phone, now));
   for (const person of guardians) {
-    statements.push(db.prepare("INSERT INTO family_guardians (family_id, guardian_id, will_attend) VALUES (?, ?, ?) ON CONFLICT(family_id, guardian_id) DO UPDATE SET will_attend = MAX(family_guardians.will_attend, excluded.will_attend)")
-      .bind(familyId, person.id, Number(person.attending)));
+    const ownPhone = person.key === "secondary" ? normalizePhone(person.phone || "") : null;
+    statements.push(db.prepare("INSERT INTO family_guardians (family_id, guardian_id, will_attend, phone) VALUES (?, ?, ?, ?) ON CONFLICT(family_id, guardian_id) DO UPDATE SET will_attend = MAX(family_guardians.will_attend, excluded.will_attend), phone = COALESCE(excluded.phone, family_guardians.phone)")
+      .bind(familyId, person.id, Number(person.attending), ownPhone));
   }
   for (const child of children) {
     statements.push(db.prepare("INSERT INTO children (id, family_id, full_name, birth_date, affiliation, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET family_id = CASE WHEN children.family_id = excluded.family_id THEN children.family_id ELSE NULL END, affiliation = excluded.affiliation")

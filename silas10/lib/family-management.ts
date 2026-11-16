@@ -6,10 +6,22 @@ import { getEventSnapshot } from "./snapshot";
 const familyId = z.string().regex(/^f_[a-f0-9]{64}$/);
 export async function editFamily(id: string, raw: unknown, userId: string) {
   familyId.parse(id);
-  const input = z.object({ status: z.enum(["active", "cancelled"]), phone: z.string().transform(normalizePhone).refine(isMobilePhone, "Informe um celular com DDD e 9 dígitos."), version: z.number().int().nonnegative() }).parse(raw);
-  const result = await env.DB!.prepare("UPDATE families SET status=?, phone=?, cancelled_at=?, cancelled_by=?, version=version+1 WHERE id=? AND version=?")
-    .bind(input.status, input.phone, input.status === "cancelled" ? new Date().toISOString() : null, input.status === "cancelled" ? userId : null, id, input.version).run();
-  if (!result.meta.changes) throw new AppError(409, "A inscrição foi atualizada em outra tela. Atualize a lista antes de editar.");
+  const input = z.object({
+    status: z.enum(["active", "cancelled"]),
+    phone: z.string().transform(normalizePhone).refine(isMobilePhone, "Informe um celular com DDD e 9 dígitos."),
+    // Celular do segundo responsável (vazio = sem celular).
+    guardianPhones: z.record(z.string().regex(/^g_[a-f0-9]{64}$/), z.string().transform(normalizePhone).refine(value => value === "" || isMobilePhone(value), "Informe o celular do segundo responsável com DDD e 9 dígitos, ou deixe em branco.")).default({}),
+    version: z.number().int().nonnegative(),
+  }).parse(raw);
+  const db = env.DB!;
+  const statements = [db.prepare("UPDATE families SET status=?, phone=?, cancelled_at=?, cancelled_by=?, version=version+1 WHERE id=? AND version=?")
+    .bind(input.status, input.phone, input.status === "cancelled" ? new Date().toISOString() : null, input.status === "cancelled" ? userId : null, id, input.version)];
+  for (const [guardianId, phone] of Object.entries(input.guardianPhones)) {
+    statements.push(db.prepare("UPDATE family_guardians SET phone=? WHERE family_id=? AND guardian_id=? AND guardian_id <> (SELECT primary_guardian_id FROM families WHERE id=?) AND EXISTS (SELECT 1 FROM families WHERE id=? AND version=? AND status=? AND phone=?)")
+      .bind(phone || null, id, guardianId, id, id, input.version + 1, input.status, input.phone));
+  }
+  const results = await db.batch(statements);
+  if (!results[0].meta.changes) throw new AppError(409, "A inscrição foi atualizada em outra tela. Atualize a lista antes de editar.");
   return { updated: true };
 }
 export async function deleteFamily(id: string, raw: unknown) {

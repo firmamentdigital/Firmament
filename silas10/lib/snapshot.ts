@@ -7,7 +7,7 @@ import { affiliationLabel, type ChildAffiliation } from "./affiliation";
 type PersonRow = { id: string; full_name: string; birth_date: string; checked_in_at: string | null; version: number };
 type ChildRow = PersonRow & { family_id: string; affiliation: ChildAffiliation | null };
 type FamilyRow = { id: string; code: string; primary_guardian_id: string; phone: string; created_at: string; status: "active" | "cancelled"; version: number };
-type FamilyGuardianRow = { family_id: string; guardian_id: string; will_attend: number };
+type FamilyGuardianRow = { family_id: string; guardian_id: string; will_attend: number; phone: string | null };
 type ChildGuardianRow = { child_id: string; guardian_id: string };
 type QuestionRow = { family_id: string; question: string; created_at: string };
 
@@ -17,7 +17,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
     env.DB.prepare("SELECT id, code, primary_guardian_id, phone, created_at, status, version FROM families ORDER BY created_at DESC"),
     env.DB.prepare("SELECT id, family_id, full_name, birth_date, affiliation, checked_in_at, version FROM children ORDER BY full_name"),
     env.DB.prepare("SELECT id, full_name, birth_date, checked_in_at, version FROM guardians ORDER BY full_name"),
-    env.DB.prepare("SELECT family_id, guardian_id, will_attend FROM family_guardians"),
+    env.DB.prepare("SELECT family_id, guardian_id, will_attend, phone FROM family_guardians"),
     env.DB.prepare("SELECT child_id, guardian_id FROM child_guardians"),
     env.DB.prepare("SELECT family_id, question, created_at FROM submissions WHERE question <> '' ORDER BY created_at"),
   ]);
@@ -32,6 +32,12 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
   const guardianMap = new Map(guardians.map(item => [item.id, item]));
   const familyMap = new Map(families.map(item => [item.id, item]));
   const unique = (items: string[]) => [...new Set(items)];
+  // Celular de cada responsável: o principal usa o da família; o segundo, o próprio (se informado).
+  const linkPhone = (link: FamilyGuardianRow) => {
+    const family = familyMap.get(link.family_id);
+    return family?.primary_guardian_id === link.guardian_id ? family.phone : link.phone || null;
+  };
+  const familyPhones = (familyId: string) => unique([familyMap.get(familyId)!.phone, ...familyLinks.filter(link => link.family_id === familyId).map(linkPhone).filter((p): p is string => Boolean(p))]);
 
   const details: FamilyDetail[] = families.map(family => ({
     id: family.id, code: family.code, phone: family.phone, createdAt: family.created_at,
@@ -48,8 +54,9 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
       return {
         id: person.id, fullName: person.full_name, birthDate: person.birth_date,
         age: ageAtEvent(person.birth_date)!, attending: Boolean(link.will_attend), checkedInAt: person.checked_in_at,
+        primary: person.id === family.primary_guardian_id, phone: linkPhone(link),
       };
-    }),
+    }).sort((a, b) => Number(b.primary) - Number(a.primary)),
     questions: questions.filter(item => item.family_id === family.id).filter((item, index, items) => items.findIndex(other => other.question === item.question) === index)
       .map(item => ({ text: item.question, createdAt: item.created_at })),
   }));
@@ -59,7 +66,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
     return {
       id: child.id, kind: "child", fullName: child.full_name, birthDate: child.birth_date,
       affiliation: child.affiliation,
-      age: ageAtEvent(child.birth_date)!, phone: family.phone,
+      age: ageAtEvent(child.birth_date)!, phone: familyPhones(family.id).join(" / "),
       familyCodes: [family.code], familyIds: [family.id],
       linkedNames: childLinks.filter(link => link.child_id === child.id).map(link => guardianMap.get(link.guardian_id)?.full_name || ""),
       checkedInAt: child.checked_in_at, version: child.version,
@@ -74,7 +81,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
       id: guardian.id, kind: "guardian", fullName: guardian.full_name,
       affiliation: null,
       birthDate: guardian.birth_date, age: ageAtEvent(guardian.birth_date)!,
-      phone: unique(linkedFamilyIds.map(id => familyMap.get(id)!.phone)).join(" / "),
+      phone: unique(familyLinks.filter(link => link.guardian_id === guardian.id && activeIds.has(link.family_id)).map(linkPhone).filter((p): p is string => Boolean(p))).join(" / "),
       familyCodes: unique(linkedFamilyIds.map(id => familyMap.get(id)!.code)),
       familyIds: linkedFamilyIds,
       linkedNames: children.filter(child => childIds.has(child.id)).map(child => child.full_name),

@@ -30,7 +30,7 @@ export type MergePlan = {
   remove: { id: string; code: string; version: number; phone: string };
   duplicates: { removed: string; kept: string; birthDate: string }[];
   moved: { fullName: string; birthDate: string }[];
-  addedGuardians: { fullName: string; attending: boolean }[];
+  addedGuardians: { fullName: string; attending: boolean; phone: string | null }[];
   result: { children: number; guardians: string[]; people: number };
 };
 
@@ -57,7 +57,7 @@ function plan(keep: FamilyDetail, remove: FamilyDetail): { plan: MergePlan; pair
       remove: { id: remove.id, code: remove.code, version: remove.version, phone: remove.phone },
       duplicates: pairs.map(([removed, kept]) => ({ removed: removed.fullName, kept: kept.fullName, birthDate: kept.birthDate })),
       moved: moved.map(c => ({ fullName: c.fullName, birthDate: c.birthDate })),
-      addedGuardians: newGuardians.map(g => ({ fullName: g.fullName, attending: g.attending })),
+      addedGuardians: newGuardians.map(g => ({ fullName: g.fullName, attending: g.attending, phone: g.primary ? remove.phone : g.phone })),
       result: { children, guardians: guardians.map(g => g.fullName), people: children + guardians.filter(g => g.attending).length },
     },
   };
@@ -83,7 +83,9 @@ export async function mergeFamilies(raw: unknown) {
   const g = [keep.id, keep.version, remove.id, remove.version];
   const s: D1PreparedStatement[] = [];
   for (const person of newGuardians) {
-    s.push(db.prepare(`INSERT INTO family_guardians (family_id, guardian_id, will_attend) SELECT ?, ?, ? WHERE ${guard} ON CONFLICT(family_id, guardian_id) DO NOTHING`).bind(keep.id, person.id, Number(person.attending), ...g));
+    // Quem era o contato principal da inscrição duplicada leva o celular dela.
+    const ownPhone = person.primary ? remove.phone : person.phone;
+    s.push(db.prepare(`INSERT INTO family_guardians (family_id, guardian_id, will_attend, phone) SELECT ?, ?, ?, ? WHERE ${guard} ON CONFLICT(family_id, guardian_id) DO NOTHING`).bind(keep.id, person.id, Number(person.attending), ownPhone || null, ...g));
   }
   for (const [duplicate, kept] of pairs) {
     if (duplicate.id === kept.id) continue;

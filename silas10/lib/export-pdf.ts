@@ -204,7 +204,7 @@ export async function buildRegistrationPdf(snapshot: EventSnapshot): Promise<Uin
       textBlock("RESPONSÁVEIS VINCULADOS", child.guardianNames.join("; ") || "Sem vínculo informado");
     }
     for (const guardian of family.guardians) {
-      textBlock(guardian.attending ? "ACOMPANHANTE" : "CONTATO / NÃO IRÁ", guardian.fullName + " · " + formatBirthDate(guardian.birthDate) + " · " + guardian.age + " anos" + (guardian.attending ? guardian.checkedInAt ? " · Presente" : " · A confirmar" : ""));
+      textBlock(guardian.attending ? "ACOMPANHANTE" : "CONTATO / NÃO IRÁ", guardian.fullName + " · " + formatBirthDate(guardian.birthDate) + " · " + guardian.age + " anos" + " · Celular " + (guardian.phone ? formatPhone(guardian.phone) : "não informado") + (guardian.attending ? guardian.checkedInAt ? " · Presente" : " · A confirmar" : ""));
     }
     for (const question of family.questions) textBlock("DÚVIDA / DIFICULDADE", question.text);
     if (cursor - BOTTOM >= 6) page.drawLine({ start: { x: MARGIN, y: cursor - 2 }, end: { x: PAGE_WIDTH - MARGIN, y: cursor - 2 }, color: C.line, thickness: 0.5 });

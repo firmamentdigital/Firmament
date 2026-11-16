@@ -10,6 +10,8 @@ const guardian = z.object({
   fullName,
   birthDate,
   attending: z.boolean(),
+  // Celular próprio: obrigatório para o segundo responsável (o do principal é o "phone" da família).
+  phone: z.string().optional(),
 });
 const child = z.object({
   fullName,
@@ -36,6 +38,11 @@ export const registrationSchema = z.object({
   if (hasSecondary && value.children.length < 2) {
     ctx.addIssue({ code: "custom", path: ["guardians"], message: "O segundo responsável pode ser incluído quando houver duas ou mais crianças na inscrição." });
   }
+  value.guardians.forEach((person, index) => {
+    if (person.key === "secondary" && !isMobilePhone(normalizePhone(person.phone || ""))) {
+      ctx.addIssue({ code: "custom", path: ["guardians", index, "phone"], message: "Informe o celular do segundo responsável com DDD e 9 dígitos." });
+    }
+  });
   value.children.forEach((item, index) => {
     if (!item.guardianKeys.includes("primary") || (hasSecondary && !item.guardianKeys.includes("secondary"))) {
       ctx.addIssue({ code: "custom", path: ["children", index, "guardianKeys"], message: "Vincule os responsáveis da família a todas as crianças." });
