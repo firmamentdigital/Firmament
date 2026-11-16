@@ -57,7 +57,7 @@ export function FamilyTable({ families, onOpenFamily }: { families: FamilyDetail
             <td className="table-phone"><a href={"tel:+55" + family.phone}>{formatPhone(family.phone)}</a></td>
             <td><span className={"family-status " + family.status}>{family.status === "cancelled" ? "Cancelada" : "Ativa"}</span></td>
             <td><strong>{family.status === "cancelled" ? "—" : present + " de " + expected}</strong><small>{family.status === "cancelled" ? "Fora da recepção" : "pessoas presentes"}</small></td>
-            <td className="table-actions"><button className="table-edit-button" onClick={() => onOpenFamily(family.id)} aria-label={"Ver ou editar inscrição " + family.code}>Ver / editar <ChevronRight size={15} /></button>{family.questions.length > 0 && <span className="table-observation"><MessageSquareText size={14} />Tem observação</span>}</td>
+            <td className="table-actions"><button className="table-edit-button" onClick={() => onOpenFamily(family.id)} aria-label={"Ver ou editar inscrição " + family.code}>Ver / editar <ChevronRight size={15} /></button>{family.questions.length > 0 && <span className="table-observation"><MessageSquareText size={14} />Tem dúvida</span>}</td>
           </tr>;
         })}</tbody>
       </table>
