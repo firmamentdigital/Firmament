@@ -42,18 +42,18 @@ export function ParticipantTable({ people, busyId, onPresence, onOpenFamily }: {
 
 export function FamilyTable({ families, onOpenFamily }: { families: FamilyDetail[]; onOpenFamily: (id: string) => void }) {
   return <>
-    <p className="table-scroll-hint">Uma inscrição por linha, com todas as crianças do mesmo responsável. Deslize para ver mais.</p>
+    <p className="table-scroll-hint">Uma inscrição por linha, com todas as crianças e responsáveis da família. Deslize para ver mais.</p>
     <div className="management-table-shell" tabIndex={0} role="region" aria-label="Tabela de inscrições por família com rolagem horizontal">
       <table className="management-data-table family-data-table">
-        <caption className="sr-only">Inscrições por família, crianças, responsável, celular, situação e presenças</caption>
-        <thead><tr><th scope="col">Inscrição</th><th scope="col">Crianças e jovens</th><th scope="col">Responsável</th><th scope="col">Celular</th><th scope="col">Situação</th><th scope="col">Presenças</th><th scope="col">Ações</th></tr></thead>
+        <caption className="sr-only">Inscrições por família, crianças, responsáveis, celular, situação e presenças</caption>
+        <thead><tr><th scope="col">Inscrição</th><th scope="col">Crianças e jovens</th><th scope="col">Responsáveis</th><th scope="col">Celular</th><th scope="col">Situação</th><th scope="col">Presenças</th><th scope="col">Ações</th></tr></thead>
         <tbody>{families.map(family => {
           const expected = family.children.length + family.guardians.filter(p => p.attending).length;
           const present = family.children.filter(p => p.checkedInAt).length + family.guardians.filter(p => p.attending && p.checkedInAt).length;
           return <tr key={family.id} className={family.status === "cancelled" ? "table-cancelled" : ""}>
             <th scope="row" className="table-person"><strong className="table-family-code">{family.code}</strong><small>{new Date(family.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</small></th>
             <td className="table-children">{family.children.map(child => <div key={child.id}><strong>{child.fullName}</strong><small>{child.age} anos · {affiliationLabel(child.affiliation)}</small></div>)}</td>
-            <td><strong>{family.primaryGuardianName}</strong><small>{family.guardians.some(p => p.attending) ? "Acompanhará o encontro" : "Contato da família"}</small></td>
+            <td className="table-guardians">{[...family.guardians].sort((a, b) => Number(b.fullName === family.primaryGuardianName) - Number(a.fullName === family.primaryGuardianName)).map(person => <div key={person.id}><strong>{person.fullName}</strong><small>{person.attending ? "Acompanhará o encontro" : person.fullName === family.primaryGuardianName ? "Contato da família" : "Não irá ao encontro"}</small></div>)}</td>
             <td className="table-phone"><a href={"tel:+55" + family.phone}>{formatPhone(family.phone)}</a></td>
             <td><span className={"family-status " + family.status}>{family.status === "cancelled" ? "Cancelada" : "Ativa"}</span></td>
             <td><strong>{family.status === "cancelled" ? "—" : present + " de " + expected}</strong><small>{family.status === "cancelled" ? "Fora da recepção" : "pessoas presentes"}</small></td>

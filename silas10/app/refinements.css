@@ -31,3 +31,7 @@
 .family-merge-zone .text-button{display:inline-flex;align-items:center;gap:7px;color:#5b4f45}
 .merge-preview ul{margin:10px 0 12px;padding-left:18px;display:grid;gap:7px;font-size:13px;line-height:1.6}
 .merge-preview p{font-size:13px;line-height:1.7}
+/* Coluna "Responsáveis" na tabela por família (um ou dois responsáveis) */
+.table-guardians{min-width:220px}
+.table-guardians>div+div{margin-top:12px;padding-top:10px;border-top:1px solid #ede7df}
+.table-guardians strong{display:block}
