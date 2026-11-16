@@ -40,6 +40,7 @@ export {registrationCode} from './lib/reception';
 export {createCampaign,getCampaign,listCampaigns,campaignImage,updateContact,limitedFormData} from './lib/messages';
 export {contactText,whatsappUrl} from './lib/message-types';
 export * as registrationRoute from './app/api/registrations/route';
+export * as mergeRoute from './app/api/admin/family-merge/route';
 export * as snapshotRoute from './app/api/admin/snapshot/route';
 export * as attendanceRoute from './app/api/admin/attendance/route';
 export * as familyAttendanceRoute from './app/api/admin/attendance/family/route';
@@ -237,6 +238,34 @@ await writeFile(resolve(work,'roster-stress.xlsx'),app.buildRegistrationXlsx(str
 globalThis.__silasTestUser=null;response=await app.imageRoute.GET(get('/api/admin/messages/'+campaign.id+'/image'),{params:Promise.resolve({id:campaign.id})});check(response.status===401,'Stored message image remains inaccessible after sign-out');
 // The master account is configured only in the server environment.
 const testMasterPassword='MasterTestPassword!678';
+{const savedUser=globalThis.__silasTestUser,savedCookie=globalThis.__silasTestCookie;
+// Juntar inscrição duplicada (caso real: Maria Clara inscrita pelo pai e pela mãe).
+globalThis.__silasTestCookie='';globalThis.__silasTestUser=owner;
+const paulo={requestId:crypto.randomUUID(),phone:'(11) 99267-0001',guardians:[{key:'primary',fullName:'Paulo Henrique Junção Teste',birthDate:'1980-01-10',attending:true}],children:[{fullName:'Arthur Correa Junção Teste',birthDate:'2016-05-05',affiliation:'athletics',guardianKeys:['primary']},{fullName:'Maria Clara Correa Junção Teste',birthDate:'2012-03-03',affiliation:'athletics',guardianKeys:['primary']}],question:'',confirmed:true};
+const josiane={requestId:crypto.randomUUID(),phone:'(11) 95045-0002',guardians:[{key:'primary',fullName:'Josiane Junção Teste',birthDate:'1982-02-20',attending:true}],children:[{fullName:'Maria Clara Junção Teste',birthDate:'2012-03-03',affiliation:'athletics',guardianKeys:['primary']}],question:'Pais separados',confirmed:true};
+const pauloCode=(await app.registerFamily(paulo)).code;const josianeCode=(await app.registerFamily(josiane)).code;
+let snap=await app.getEventSnapshot();const keepFam=snap.families.find(f=>f.code===pauloCode);const childrenBefore=snap.stats.children;
+const merge=data=>app.mergeRoute.POST(request('/api/admin/family-merge',data));
+response=await merge({keepId:keepFam.id,removeCode:josianeCode});check(response.ok,'Merge preview works for the owner');const preview=(await response.json()).preview;
+check(preview.duplicates.length===1&&preview.duplicates[0].removed==='Maria Clara Junção Teste'&&preview.moved.length===0,'Preview recognises the repeated child by birth date and first name');
+check(preview.addedGuardians.length===1&&preview.addedGuardians[0].fullName==='Josiane Junção Teste'&&preview.result.people===4,'Preview adds the mother as second responsible: 2 children + 2 adults');
+check((await app.getEventSnapshot()).families.some(f=>f.code===josianeCode),'Preview does not change anything');
+response=await merge({keepId:keepFam.id,removeCode:josianeCode,confirm:true,keepVersion:keepFam.version+1,removeVersion:preview.remove.version});check(response.status===409,'Stale versions are refused');
+response=await merge({keepId:keepFam.id,removeCode:keepFam.code});check(response.status===422,'A family cannot be merged with itself');
+response=await merge({keepId:keepFam.id,removeCode:'S10-0000000000'});check(response.status===404,'Unknown codes are reported');
+globalThis.__silasTestUser={userId:'other',email:'visitor@example.test'};response=await merge({keepId:keepFam.id,removeCode:josianeCode});check(response.status===403,'Only the owner can merge registrations');globalThis.__silasTestUser=owner;
+response=await merge({keepId:keepFam.id,removeCode:josianeCode,confirm:true,keepVersion:preview.keep.version,removeVersion:preview.remove.version});check(response.ok,'Owner merges the duplicate registration');
+snap=await app.getEventSnapshot();const merged=snap.families.find(f=>f.code===pauloCode);
+check(!snap.families.some(f=>f.code===josianeCode),'Duplicate registration no longer exists');
+check(merged.guardians.length===2&&merged.guardians.some(g=>g.fullName==='Josiane Junção Teste'&&g.attending),'Mother is now the second responsible of the kept family');
+check(merged.children.length===2&&merged.children.every(c=>c.guardianNames.length===2),'Both children are linked to father and mother');
+check(snap.stats.children===childrenBefore-1,'The repeated child was counted only once');
+check(merged.questions.some(q=>q.text==='Pais separados'),'Notes from the duplicate registration are kept');
+response=await app.registrationRoute.POST(request('/api/registrations',{...josiane,requestId:crypto.randomUUID()}));check(response.status===409||response.ok,'Re-sending the old form does not break the merged family');
+const third={requestId:crypto.randomUUID(),phone:'(11) 90000-0003',guardians:[{key:'primary',fullName:'Terceiro Adulto Junção Teste',birthDate:'1970-01-01',attending:true}],children:[{fullName:'Criança Terceira Junção Teste',birthDate:'2014-04-04',affiliation:'cod',guardianKeys:['primary']}],question:'',confirmed:true};
+const thirdCode=(await app.registerFamily(third)).code;const keep2=(await app.getEventSnapshot()).families.find(f=>f.code===pauloCode);
+response=await merge({keepId:keep2.id,removeCode:thirdCode});check(response.status===422,'A merge that would exceed two responsible adults is refused');
+globalThis.__silasTestUser=savedUser;globalThis.__silasTestCookie=savedCookie;}
 globalThis.__silasTestEnv.MASTER_LOGIN='MasterTest';
 globalThis.__silasTestEnv.MASTER_PASSWORD_HASH=await app.hashPassword(testMasterPassword);
 globalThis.__silasTestUser=null;globalThis.__silasTestCookie='';

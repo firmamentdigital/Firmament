@@ -26,3 +26,8 @@
 @media(min-width:600px){.audience-line{margin-bottom:38px}.audience-urgency{top:58%;transform:rotate(-9deg)}.audience-urgency span{font-size:28px}.audience-urgency a{font-size:20px}}
 @media(min-width:600px){.mobile-experience .audience-line{margin-bottom:40px}}
 @media(min-width:600px){.audience-urgency{top:calc(100% + 2px);transform:rotate(-8deg)}.mobile-experience .audience-line{margin-bottom:62px}}
+/* Painel "Juntar inscrição duplicada" na gestão */
+.family-merge-zone{margin-top:14px}
+.family-merge-zone .text-button{display:inline-flex;align-items:center;gap:7px;color:#5b4f45}
+.merge-preview ul{margin:10px 0 12px;padding-left:18px;display:grid;gap:7px;font-size:13px;line-height:1.6}
+.merge-preview p{font-size:13px;line-height:1.7}
