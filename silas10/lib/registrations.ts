@@ -100,7 +100,7 @@ export async function registerFamily(raw: unknown) {
       throw new AppError(409, "Uma das crianças já está inscrita. Para ajustar responsáveis ou contato, fale com Mario Ferrari.");
     }
     if (message.includes("child_guardian_limit")) {
-      throw new AppError(409, "Uma das crianças já tem um responsável vinculado. Fale com Mario Ferrari para ajustar o cadastro.");
+      throw new AppError(409, "Uma das crianças já tem responsáveis vinculados em outra inscrição. Fale com Mario Ferrari para ajustar o cadastro.");
     }
     throw error;
   }

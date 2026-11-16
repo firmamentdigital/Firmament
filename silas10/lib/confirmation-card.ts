@@ -2,7 +2,18 @@ import type { EventBrand } from "./brand-types";
 export type ConfirmationCardData = {
   code: string; children: string[]; guardians: string[];
   responsibleName?: string; responsibleAttending?: boolean; phone?: string;
+  responsibleCount?: number;
 };
+// Texto do bloco de responsáveis (um ou dois, ex.: pai e mãe).
+export function responsibleSummary(data: ConfirmationCardData) {
+  const plural = (data.responsibleCount ?? 1) > 1;
+  const attending = data.responsibleAttending !== false ? data.guardians : [];
+  const note = !attending.length ? "Contato da família · sem vaga de acompanhante."
+    : plural && attending.length > 1 ? "Os dois acompanharão as crianças no encontro."
+    : plural ? `${attending[0]} acompanhará as crianças no encontro.`
+    : "Acompanhará as crianças no encontro.";
+  return { label: plural ? "Responsáveis vinculados" : "Responsável vinculado", note, plural, attending: attending.length > 0 };
+}
 export function receptionUrl(origin: string, code: string) {
   if (!/^S10-[A-F0-9]{10}$/.test(code)) throw new Error("Código de inscrição inválido.");
   const url = new URL("/gestao", origin); url.searchParams.set("inscricao", code); return url.toString();
@@ -59,10 +70,10 @@ export async function confirmationCardImage(data: ConfirmationCardData, qrImage:
     ctx.font = "800 27px Manrope"; ctx.fillStyle = "#ce1934"; ctx.fillText(String(i + 1).padStart(2, "0"), 65, y);
     ctx.font = "800 36px Manrope"; ctx.fillStyle = "#19191d"; lines.forEach(line => { ctx.fillText(line, 128, y); y += 49; }); y += 25;
   });
-  label("RESPONSÁVEL VINCULADO"); ctx.font = "800 36px Manrope"; ctx.fillStyle = "#19191d";
+  label(responsibleSummary(data).label.toUpperCase()); ctx.font = "800 36px Manrope"; ctx.fillStyle = "#19191d";
   responsible.forEach(line => { ctx.fillText(line, 65, y); y += 49; });
   ctx.font = "400 25px Manrope"; ctx.fillStyle = "#716b66";
-  ctx.fillText(data.responsibleAttending !== false && data.guardians.length ? "Acompanhará as crianças no encontro." : "Contato da família · sem vaga de acompanhante.", 65, y); y += 55;
+  ctx.fillText(responsibleSummary(data).note, 65, y); y += 55;
   ctx.strokeStyle = "#dfd9d2"; ctx.beginPath(); ctx.moveTo(65, y); ctx.lineTo(1015, y); ctx.stroke(); y += 30;
   ctx.drawImage(qr, 65, y, 245, 245);
   ctx.fillStyle = "#716b66"; ctx.font = "800 20px Manrope"; ctx.fillText("CÓDIGO DA FAMÍLIA", 350, y + 64);

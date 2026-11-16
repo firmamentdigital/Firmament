@@ -10,6 +10,7 @@ import type { ConfirmationCardData } from "@/lib/confirmation-card";
 
 type ChildDraft = Omit<ChildInput, "affiliation"> & { affiliation: ChildAffiliation | "" };
 const primary = (): GuardianInput => ({ key: "primary", fullName: "", birthDate: "", attending: true });
+const secondary = (): GuardianInput => ({ key: "secondary", fullName: "", birthDate: "", attending: true });
 const newChild = (): ChildDraft => ({ fullName: "", birthDate: "", affiliation: "", guardianKeys: ["primary"] });
 const steps = ["Criança", "Responsável", "Confirmação"];
 const receiptStorage = "silas10:family-card:v4";
@@ -26,6 +27,8 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   const [step, setStep] = useState(0);
   const [children, setChildren] = useState<ChildDraft[]>([newChild()]);
   const [guardian, setGuardian] = useState<GuardianInput>(primary());
+  // Segundo responsável (ex.: pai e mãe): disponível quando há duas ou mais crianças.
+  const [second, setSecond] = useState<GuardianInput | null>(null);
   const [phone, setPhone] = useState("");
   const [question, setQuestion] = useState("");
   const [confirmed, setConfirmed] = useState(true);
@@ -35,7 +38,10 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   const [cardDetails, setCardDetails] = useState<ConfirmationCardData | null>(null);
   const request = useRef<{ id: string; fingerprint: string } | null>(null);
   const heading = useRef<HTMLHeadingElement>(null);
-  const accompanying = guardian.attending ? 1 : 0;
+  const canAddSecond = children.length >= 2;
+  const secondGuardian = canAddSecond ? second : null;
+  const responsibles = secondGuardian ? [guardian, secondGuardian] : [guardian];
+  const accompanying = responsibles.filter(person => person.attending).length;
   const peopleCount = children.length + accompanying;
 
   useEffect(() => {
@@ -67,6 +73,10 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   }
   function validateGuardian() {
     if (guardian.fullName.trim().length < 3 || !isBirthDate(parseBirthDate(guardian.birthDate))) return "Preencha o nome completo e uma data de nascimento válida do responsável.";
+    if (secondGuardian) {
+      if (secondGuardian.fullName.trim().length < 3 || !isBirthDate(parseBirthDate(secondGuardian.birthDate))) return "Preencha o nome completo e uma data de nascimento válida do segundo responsável, ou remova esse cadastro.";
+      if (normalizeName(secondGuardian.fullName) + secondGuardian.birthDate === normalizeName(guardian.fullName) + guardian.birthDate) return "O segundo responsável precisa ser uma pessoa diferente do primeiro.";
+    }
     if (!isMobilePhone(phone)) return "Informe o celular com DDD e 9 dígitos. Exemplo: (11) 99999-9999.";
     return "";
   }
@@ -77,8 +87,8 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
     if (step < 2) { moveTo(step + 1); return; }
     if (!confirmed) { setError("Confirme os dados para reservar as vagas."); return; }
     const payload = {
-      phone, guardians: [{ ...guardian, birthDate: parseBirthDate(guardian.birthDate) }],
-      children: children.map(child => ({ ...child, birthDate: parseBirthDate(child.birthDate), affiliation: child.affiliation as ChildAffiliation, guardianKeys: ["primary"] })),
+      phone, guardians: responsibles.map(person => ({ ...person, birthDate: parseBirthDate(person.birthDate) })),
+      children: children.map(child => ({ ...child, birthDate: parseBirthDate(child.birthDate), affiliation: child.affiliation as ChildAffiliation, guardianKeys: responsibles.map(person => person.key) })),
       question, confirmed,
     };
     const fingerprint = JSON.stringify(payload);
@@ -89,7 +99,7 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
       const response = await fetch("/api/registrations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const result = await response.json() as RegistrationReceipt & { error?: string };
       if (!response.ok) throw new Error(result.error || "Não foi possível enviar a inscrição.");
-      const details = { code: result.code, responsibleName: guardian.fullName.trim(), responsibleAttending: guardian.attending, phone, children: children.map(child => child.fullName.trim()), guardians: guardian.attending ? [guardian.fullName.trim()] : [] };
+      const details = { code: result.code, responsibleName: responsibles.map(person => person.fullName.trim()).join(" e "), responsibleAttending: accompanying > 0, responsibleCount: responsibles.length, phone, children: children.map(child => child.fullName.trim()), guardians: responsibles.filter(person => person.attending).map(person => person.fullName.trim()) };
       setCardDetails(details); setReceipt(result);
       try { sessionStorage.setItem(receiptStorage, JSON.stringify({ at: Date.now(), receipt: result, details })); } catch { /* Download remains available. */ }
       onConfirmationChange(true);
@@ -97,7 +107,7 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
     finally { setSubmitting(false); }
   }
   function reset() {
-    setGuardian(primary()); setChildren([newChild()]); setPhone(""); setQuestion("");
+    setGuardian(primary()); setSecond(null); setChildren([newChild()]); setPhone(""); setQuestion("");
     setConfirmed(true); setReceipt(null); setCardDetails(null); setError(""); setStep(0); request.current = null;
     try { sessionStorage.removeItem(receiptStorage); } catch { /* No stored card. */ }
     onConfirmationChange(false);
@@ -106,11 +116,11 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
   if (receipt && cardDetails) return <ConfirmationCard brands={brands} receipt={receipt} details={cardDetails} onReset={reset} />;
 
   return <div className="registration-panel child-first-form">
-    <div className="form-intro"><h2>Inscreva a criança</h2><p>Primeiro a criança. Depois, um responsável. Por fim, seu cartão.</p></div>
+    <div className="form-intro"><h2>Inscreva a criança</h2><p>Primeiro a criança. Depois, o responsável. Por fim, seu cartão.</p></div>
     <nav className="form-progress" aria-label="Etapas da inscrição">{steps.map((label, index) => <button key={label} type="button" className={step === index ? "active" : step > index ? "done" : ""} aria-current={step === index ? "step" : undefined} disabled={index > step || submitting} onClick={() => moveTo(index)}><span>{step > index ? <Check size={15} /> : "0" + (index + 1)}</span>{label}</button>)}</nav>
     <form onSubmit={submit}>
       <fieldset disabled={submitting} className="form-fieldset">
-        <div className="step-heading"><h3 ref={heading} tabIndex={-1}>{["Quem vai participar?", "Quem é o responsável?", "Confira e confirme"][step]}</h3><p>{["Preencha os dados da criança ou jovem e selecione seu vínculo.", "Um responsável por criança. Preencha uma vez para todas as crianças desta inscrição.", "Confira as crianças, o responsável e o contato antes de reservar."][step]}</p></div>
+        <div className="step-heading"><h3 ref={heading} tabIndex={-1}>{["Quem vai participar?", "Quem é o responsável?", "Confira e confirme"][step]}</h3><p>{["Preencha os dados da criança ou jovem e selecione seu vínculo.", canAddSecond ? "Preencha uma vez para todas as crianças. Se quiser, inclua um segundo responsável, como pai e mãe." : "Um responsável por criança. Preencha uma vez para todas as crianças desta inscrição.", "Confira as crianças, os responsáveis e o contato antes de reservar."][step]}</p></div>
         {step === 0 && <div className="step-content">
           {children.map((child, index) => {
             const age = isBirthDate(parseBirthDate(child.birthDate)) ? ageAtEvent(parseBirthDate(child.birthDate)) : null;
@@ -128,18 +138,25 @@ export default function RegistrationForm({ brands, onConfirmationChange }: { bra
         {step === 1 && <div className="step-content">
           <div className="guardian-children-note"><span className="eyebrow">RESPONSÁVEL POR {children.length === 1 ? "ESTA CRIANÇA" : "ESTAS CRIANÇAS"}</span><p>{children.map(child => child.fullName.trim()).join(" · ")}</p></div>
           <section className="person-card">
-            <div className="person-card-heading"><span className="person-icon"><UserRound size={18} /></span><strong>Responsável pela inscrição</strong><span className="single-guardian-label">Cadastro único</span></div>
+            <div className="person-card-heading"><span className="person-icon"><UserRound size={18} /></span><strong>Responsável pela inscrição</strong><span className="single-guardian-label">{secondGuardian ? "Principal" : "Cadastro único"}</span></div>
             <div className="field"><label htmlFor="primary-name">Nome completo do responsável <span>*</span></label><input id="primary-name" value={guardian.fullName} onChange={e => setGuardian(current => ({ ...current, fullName: e.target.value }))} onInput={e => { const value = e.currentTarget.value; setGuardian(current => ({ ...current, fullName: value })); }} autoComplete="name" placeholder="Como está no documento" maxLength={120} required /></div>
             <BirthField id="primary-birth" value={guardian.birthDate} onChange={value => setGuardian(current => ({ ...current, birthDate: value }))} />
             <div className="field"><label htmlFor="main-phone">WhatsApp com DDD <span>*</span></label><input id="main-phone" type="tel" inputMode="tel" value={phone} onChange={e => setPhone(maskMobilePhone(e.target.value))} onInput={e => setPhone(maskMobilePhone(e.currentTarget.value))} autoComplete="tel-national" placeholder="(11) 99999-9999" maxLength={15} minLength={15} title="Celular com DDD: (11) 99999-9999" required aria-describedby="phone-hint" /><small id="phone-hint">Digite o DDD e os 9 números do celular. O formato é automático.</small></div>
             <label className="check-row"><input type="checkbox" checked={guardian.attending} onChange={e => setGuardian(current => ({ ...current, attending: e.target.checked }))} /><span>Também vou acompanhar o encontro.<small>Marque para reservar sua vaga de acompanhante.</small></span></label>
           </section>
-          <div className="inline-note"><ShieldCheck size={18} /><span>Este será o único responsável vinculado a {children.length === 1 ? "esta criança" : "todas as crianças acima"}. Cada responsável é contado apenas uma vez.</span></div>
+          {canAddSecond && !second && <button className="add-person" type="button" onClick={() => setSecond(secondary())}><span><Plus size={20} /></span><div><strong>Adicionar segundo responsável</strong><small>Por exemplo, pai e mãe. Fica vinculado a todas as crianças desta inscrição.</small></div><ArrowRight size={18} /></button>}
+          {secondGuardian && <section className="person-card" aria-label="Segundo responsável">
+            <div className="person-card-heading"><span className="person-icon"><UserRound size={18} /></span><strong>Segundo responsável</strong><button type="button" className="icon-button" onClick={() => setSecond(null)} aria-label="Remover segundo responsável"><Trash2 size={17} /></button></div>
+            <div className="field"><label htmlFor="secondary-name">Nome completo do segundo responsável <span>*</span></label><input id="secondary-name" value={secondGuardian.fullName} onChange={e => { const value = e.target.value; setSecond(current => current && ({ ...current, fullName: value })); }} onInput={e => { const value = e.currentTarget.value; setSecond(current => current && ({ ...current, fullName: value })); }} autoComplete="off" placeholder="Como está no documento" maxLength={120} required /></div>
+            <BirthField id="secondary-birth" value={secondGuardian.birthDate} onChange={value => setSecond(current => current && ({ ...current, birthDate: value }))} />
+            <label className="check-row"><input type="checkbox" checked={secondGuardian.attending} onChange={e => { const checked = e.target.checked; setSecond(current => current && ({ ...current, attending: checked })); }} /><span>Também vai acompanhar o encontro.<small>Marque para reservar a vaga deste acompanhante. O contato da família continua sendo o WhatsApp acima.</small></span></label>
+          </section>}
+          <div className="inline-note"><ShieldCheck size={18} /><span>{secondGuardian ? "Os dois responsáveis ficam vinculados a todas as crianças acima, em uma única inscrição. Assim, a família não precisa se inscrever duas vezes." : <>Este será o responsável vinculado a {children.length === 1 ? "esta criança" : "todas as crianças acima"}. Cada responsável é contado apenas uma vez.</>}</span></div>
         </div>}
         {step === 2 && <div className="step-content">
-          <div className="review-total"><UsersRound size={24} /><div><strong>{peopleCount} {peopleCount === 1 ? "pessoa" : "pessoas"} no encontro</strong><span>{children.length} {children.length === 1 ? "criança / jovem" : "crianças / jovens"}{accompanying ? " e 1 responsável acompanhante" : " · sem acompanhante presencial"}</span></div></div>
+          <div className="review-total"><UsersRound size={24} /><div><strong>{peopleCount} {peopleCount === 1 ? "pessoa" : "pessoas"} no encontro</strong><span>{children.length} {children.length === 1 ? "criança / jovem" : "crianças / jovens"}{accompanying ? ` e ${accompanying} ${accompanying === 1 ? "responsável acompanhante" : "responsáveis acompanhantes"}` : " · sem acompanhante presencial"}</span></div></div>
           <section className="review-section"><div className="review-heading"><h4>{children.length === 1 ? "Criança ou jovem" : "Crianças e jovens"}</h4><button type="button" onClick={() => moveTo(0)}>Editar</button></div>{children.map((child, index) => <div className="review-person" key={index}><span className="small-check"><Check size={13} /></span><div><strong>{child.fullName}</strong><small>{formatBirthDate(parseBirthDate(child.birthDate))} · {ageAtEvent(parseBirthDate(child.birthDate))} anos no encontro</small><small className="review-affiliation">{affiliationLabel(child.affiliation as ChildAffiliation)}</small></div></div>)}</section>
-          <section className="review-section"><div className="review-heading"><h4>Responsável</h4><button type="button" onClick={() => moveTo(1)}>Editar</button></div><div className="review-person"><span className="small-check"><Check size={13} /></span><div><strong>{guardian.fullName}</strong><small>{formatBirthDate(parseBirthDate(guardian.birthDate))} · {guardian.attending ? "Vai acompanhar o encontro" : "Contato da família · não irá ao encontro"}</small><small>Vinculado a {children.length === 1 ? "1 criança" : children.length + " crianças"}</small></div></div><div className="review-phone">WhatsApp <strong>{formatPhone(phone)}</strong></div></section>
+          <section className="review-section"><div className="review-heading"><h4>{secondGuardian ? "Responsáveis" : "Responsável"}</h4><button type="button" onClick={() => moveTo(1)}>Editar</button></div>{responsibles.map(person => <div className="review-person" key={person.key}><span className="small-check"><Check size={13} /></span><div><strong>{person.fullName}</strong><small>{formatBirthDate(parseBirthDate(person.birthDate))} · {person.attending ? "Vai acompanhar o encontro" : person.key === "primary" ? "Contato da família · não irá ao encontro" : "Não irá ao encontro"}</small><small>Vinculado a {children.length === 1 ? "1 criança" : children.length + " crianças"}</small></div></div>)}<div className="review-phone">WhatsApp <strong>{formatPhone(phone)}</strong></div></section>
           <div className="field"><label htmlFor="question">Alguma dúvida ou dificuldade? <em>Opcional</em></label><textarea id="question" rows={4} value={question} onChange={e => setQuestion(e.target.value)} onInput={e => setQuestion(e.currentTarget.value)} placeholder="Conte o que a organização precisa saber para receber bem sua família." maxLength={1500} /><small>{question.length}/1.500 caracteres</small></div>
           <label className="check-row consent-row"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} onInput={e => setConfirmed(e.currentTarget.checked)} required /><span>Confirmo os dados e sou responsável pela inscrição {children.length === 1 ? "desta criança" : "destas crianças"}.</span></label>
           <p className="privacy-note"><ShieldCheck size={16} />Os dados serão usados pela organização para preparar o encontro, enviar orientações pelo WhatsApp e registrar a presença dos participantes.</p>
