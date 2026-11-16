@@ -40,10 +40,6 @@ export default function RegistrationExperience({ brands }: { brands: EventBrand[
       </section>
     </main>
 
-    <div className="registration-help">
-      <MessageCircle size={21} /><div><strong>Dúvidas ou casos especiais?</strong><span>Fale com Mario Ferrari · (11) 94724-8000</span></div>
-      <a href={MARIO_WHATSAPP} target="_blank" rel="noreferrer">Falar pelo WhatsApp <ArrowUpRight size={16} /></a>
-    </div>
     <footer className="site-footer event-support-footer">
       <div className="footer-support">
         {!confirmed && <BrandDisplay brands={brands} />}
@@ -51,5 +47,9 @@ export default function RegistrationExperience({ brands }: { brands: EventBrand[
       </div>
       <a className="admin-entry-link" href="/gestao" target="_blank" rel="noopener noreferrer" title="Acesso administrativo" aria-label="ADM (abre em uma nova aba)">ADM</a>
     </footer>
+    <div className="registration-help">
+      <MessageCircle size={21} /><div><strong>Dúvidas ou casos especiais?</strong><span>Fale com Mario Ferrari · (11) 94724-8000</span></div>
+      <a href={MARIO_WHATSAPP} target="_blank" rel="noreferrer">Falar pelo WhatsApp <ArrowUpRight size={16} /></a>
+    </div>
   </div>;
 }
