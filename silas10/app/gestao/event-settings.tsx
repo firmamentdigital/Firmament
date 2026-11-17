@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Check, CircleAlert, ImagePlus, LoaderCircle, Mail, Save, ShieldCheck, UserPlus, X, Copy } from "lucide-react";
+import { Check, CircleAlert, ImagePlus, LoaderCircle, Mail, Save, ShieldCheck, UserPlus, X, Copy, Trash2 } from "lucide-react";
 import type { EventBrand } from "@/lib/brand-types";
 import type { AccessMember, GuestInvitation } from "@/lib/access";
 import BrandDisplay from "../brand-display";
@@ -10,13 +10,20 @@ async function resultOf<T>(response: Response) {
   if (!response.ok) throw new Error(body.error || "Não foi possível salvar. Tente novamente.");
   return body as T;
 }
-function BrandEditor({ brand, busy, onSave }: { brand: EventBrand; busy: boolean; onSave: (brand: EventBrand) => void }) {
+function BrandEditor({ brand, busy, onSave, onDelete }: { brand: EventBrand; busy: boolean; onSave: (brand: EventBrand) => void; onDelete: (brand: EventBrand) => void }) {
   const [draft, setDraft] = useState(brand);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const removable = !brand.id.startsWith("default-");
   useEffect(() => setDraft(brand), [brand]);
   return <form className="brand-editor" onSubmit={e => { e.preventDefault(); onSave(draft); }}>
     <div className="brand-preview"><img src={brand.imageUrl} alt={brand.label} /></div>
     <div className="brand-edit-fields"><label className="field"><span>Nome da marca</span><input value={draft.label} onChange={e => setDraft(v => ({ ...v, label: e.target.value }))} required maxLength={100} minLength={2} /></label><div className="brand-edit-options"><label className="field"><span>Categoria</span><select value={draft.category} onChange={e => setDraft(v => ({ ...v, category: e.target.value as EventBrand["category"] }))}><option value="organizer">Realização</option><option value="supporter">Apoio</option></select></label><label className="field order-field"><span>Ordem</span><input type="number" min={0} max={999} value={draft.sortOrder} onChange={e => setDraft(v => ({ ...v, sortOrder: Number(e.target.value) }))} required /></label></div><label className="check-row"><input type="checkbox" checked={draft.active} onChange={e => setDraft(v => ({ ...v, active: e.target.checked }))} /><span>Exibir no formulário e no cartão</span></label></div>
-    <button className="button secondary" disabled={busy} type="submit"><Save size={16} />Salvar</button>
+    <div className="brand-editor-actions">
+      <button className="button secondary" disabled={busy} type="submit"><Save size={16} />Salvar</button>
+      {removable && (!confirmDelete
+        ? <button type="button" className="text-button danger" disabled={busy} onClick={() => setConfirmDelete(true)}><Trash2 size={15} />Excluir</button>
+        : <span className="brand-delete-confirm">Excluir {brand.label}? <button type="button" className="text-button danger" disabled={busy} onClick={() => onDelete(brand)}>Sim, excluir</button><button type="button" className="text-button" disabled={busy} onClick={() => setConfirmDelete(false)}>Manter</button></span>)}
+    </div>
   </form>;
 }
 export default function EventSettings({ isOwner, ownerEmail }: { isOwner: boolean; ownerEmail: string }) {
@@ -46,6 +53,9 @@ export default function EventSettings({ isOwner, ownerEmail }: { isOwner: boolea
       catch { throw new Error("Esta imagem não abriu corretamente. Escolha outro PNG, JPG ou WebP."); }
       finally { URL.revokeObjectURL(url); }
       const list = await resultOf<EventBrand[]>(await fetch("/api/admin/brands", { method: "POST", body: data })); setBrands(list); form.current?.reset(); setUploadPreview(""); setNotice("Logomarca publicada no formulário e nos próximos cartões."); });
+  }
+  async function removeBrand(brand: EventBrand) {
+    await run(async () => { setBrands(await resultOf<EventBrand[]>(await fetch("/api/admin/brands/" + brand.id, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ version: brand.version }) }))); setNotice("Marca excluída do formulário e dos próximos cartões."); });
   }
   async function saveBrand(brand: EventBrand) {
     await run(async () => { setBrands(await resultOf<EventBrand[]>(await fetch("/api/admin/brands/" + brand.id, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(brand) }))); setNotice("Marca atualizada."); });
@@ -85,7 +95,7 @@ export default function EventSettings({ isOwner, ownerEmail }: { isOwner: boolea
     {loading ? <p><LoaderCircle className="spin" size={19} /> Carregando configurações…</p> : section === "brands" ? <>
       <div className="settings-description"><h3>As marcas certas, em todos os lugares.</h3><p>As marcas ativas aparecem ao final do formulário e no cartão de confirmação, inclusive na imagem baixada. Cartões já salvos no celular mantêm as marcas da data do download.</p></div>
       <div className="branding-live-preview"><BrandDisplay brands={brands} compact /></div>
-      <div className="brand-editor-list">{brands.map(brand => <BrandEditor key={brand.id} brand={brand} busy={busy} onSave={b => void saveBrand(b)} />)}</div>
+      <div className="brand-editor-list">{brands.map(brand => <BrandEditor key={brand.id} brand={brand} busy={busy} onSave={b => void saveBrand(b)} onDelete={b => void removeBrand(b)} />)}</div>
       <form ref={form} className="brand-upload-form" onSubmit={upload}><h3><ImagePlus size={21} />Incluir uma logomarca</h3><fieldset disabled={busy}><div className="settings-form-grid"><label className="field"><span>Nome da marca</span><input name="label" required minLength={2} maxLength={100} placeholder="Nome do realizador ou apoiador" /></label><label className="field"><span>Categoria</span><select name="category" defaultValue="supporter"><option value="supporter">Apoio</option><option value="organizer">Realização</option></select></label><label className="field order-field"><span>Ordem de exibição</span><input name="sortOrder" type="number" min={0} max={999} defaultValue={30} required /></label></div><label className="field"><span>Arquivo da logomarca</span><input name="image" type="file" accept="image/png,image/jpeg,image/webp" required onChange={e => { const f = e.target.files?.[0]; setUploadPreview(f ? URL.createObjectURL(f) : ""); }} /><small>PNG com fundo transparente é o ideal. Também aceita JPG e WebP, até 2 MB.</small></label>{uploadPreview && <img className="new-brand-preview" src={uploadPreview} alt="Prévia da nova logomarca" />}<button type="submit" className="button primary">{busy ? <LoaderCircle className="spin" size={18} /> : <ImagePlus size={18} />}Publicar logomarca</button></fieldset></form>
     </> : <>
       <div className="access-owner"><ShieldCheck size={21} /><div><strong>Seu perfil é o proprietário</strong><span>{ownerEmail}</span><small>Só você pode autorizar, revogar acessos e excluir inscrições definitivamente.</small></div></div>

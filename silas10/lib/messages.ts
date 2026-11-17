@@ -57,11 +57,18 @@ export async function createCampaign(form: FormData, userId: string) {
   }
   const snapshot = await getEventSnapshot();
   const contacts = new Map<string, Omit<MessageContact, "confirmedAt" | "version">>();
+  // Um contato por celular, incluindo o segundo responsável (pai e mãe recebem cada um
+  // no seu número). {responsavel} usa o nome de quem recebe aquele celular.
   for (const family of snapshot.families.filter(f => f.status === "active")) {
-    const item = contacts.get(family.phone) || { phone: family.phone, responsibleNames: [], childNames: [], codes: [] };
-    item.responsibleNames = [...new Set([...item.responsibleNames, family.primaryGuardianName])];
-    item.childNames = [...new Set([...item.childNames, ...family.children.map(child=>child.fullName)])];
-    item.codes.push(family.code); contacts.set(family.phone, item);
+    for (const person of family.guardians) {
+      const phone = person.primary ? family.phone : person.phone;
+      if (!phone) continue;
+      const item = contacts.get(phone) || { phone, responsibleNames: [], childNames: [], codes: [] };
+      item.responsibleNames = [...new Set([...item.responsibleNames, person.fullName])];
+      item.childNames = [...new Set([...item.childNames, ...family.children.map(child=>child.fullName)])];
+      if (!item.codes.includes(family.code)) item.codes.push(family.code);
+      contacts.set(phone, item);
+    }
   }
   if (!contacts.size) throw new AppError(422, "Ainda não há famílias inscritas para receber avisos.");
   const id = crypto.randomUUID(); const imageKey = image ? "campaigns/" + id : null;

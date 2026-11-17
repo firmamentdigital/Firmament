@@ -43,3 +43,9 @@
 .detail-person .phone-missing{display:block;margin-top:6px;color:#b07a2a}
 .table-guardian-phones>div>a,.table-guardian-phones>div>span{font-size:13px!important;line-height:1.6!important;padding:0!important;margin:0!important;min-height:0!important}
 .table-guardian-phones>div>small{display:block;font-size:11px;line-height:1.6;margin:4px 0 0;padding:0}
+/* Ações da marca (Salvar / Excluir) */
+.brand-editor-actions{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.brand-editor-actions .text-button{display:inline-flex;align-items:center;gap:5px}
+.brand-delete-confirm{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;color:#6b645f;max-width:220px;text-align:right}
+/* Navegação da gestão para a equipe: só Inscrições e Presença */
+.management-main .operations-nav.team-nav{grid-template-columns:repeat(2,minmax(0,1fr))}

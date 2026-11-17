@@ -55,6 +55,19 @@ export async function updateBrand(id: string, raw: unknown, userId: string) {
   if (!result.meta.changes) throw new AppError(409, "A marca foi atualizada em outra tela. Recarregue a lista.");
   return listBrands(true);
 }
+// Exclui uma marca enviada pela gestão (banco + arquivo). As marcas que vêm com o
+// sistema (default-*) não são excluídas: basta desmarcar "Exibir no formulário".
+export async function deleteBrand(id: string, raw: unknown) {
+  validId.parse(id);
+  if (id.startsWith("default-")) throw new AppError(422, "Esta marca vem com o sistema. Para retirá-la, desmarque \"Exibir no formulário e no cartão\" e salve.");
+  const { version } = z.object({ version: z.number().int().nonnegative() }).parse(raw);
+  const row = await env.DB!.prepare("SELECT asset_key FROM event_brands WHERE id=? AND version=?").bind(id, version).first<{ asset_key: string | null }>();
+  if (!row) throw new AppError(409, "A marca foi alterada ou já foi excluída. Recarregue a lista.");
+  const result = await env.DB!.prepare("DELETE FROM event_brands WHERE id=? AND version=?").bind(id, version).run();
+  if (!result.meta.changes) throw new AppError(409, "A marca foi alterada ou já foi excluída. Recarregue a lista.");
+  if (row.asset_key && env.BUCKET) await env.BUCKET.delete(row.asset_key);
+  return listBrands(true);
+}
 export async function brandImage(id: string) {
   validId.parse(id);
   const row = await env.DB!.prepare("SELECT asset_key, active FROM event_brands WHERE id = ?").bind(id).first<{ asset_key: string | null; active: number }>();

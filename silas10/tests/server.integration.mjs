@@ -274,6 +274,44 @@ const third={requestId:crypto.randomUUID(),phone:'(11) 90000-0003',guardians:[{k
 const thirdCode=(await app.registerFamily(third)).code;const keep2=(await app.getEventSnapshot()).families.find(f=>f.code===pauloCode);
 response=await merge({keepId:keep2.id,removeCode:thirdCode});check(response.status===422,'A merge that would exceed two responsible adults is refused');
 globalThis.__silasTestUser=savedUser;globalThis.__silasTestCookie=savedCookie;}
+{const savedUser=globalThis.__silasTestUser,savedCookie=globalThis.__silasTestCookie;
+// Equipe (convidado): vê inscrições, presença e exportações; não vê avisos, marcas, acessos nem junções.
+globalThis.__silasTestUser=owner;globalThis.__silasTestCookie='';
+response=await app.accessRoute.POST(request('/api/admin/access',{email:'secretaria@example.test'}));check(response.ok,'Owner invites the school office');const officeToken=(await response.json()).invitation.token;
+globalThis.__silasTestUser=null;
+response=await app.guestLoginRoute.POST(request('/api/guest/login',{email:'secretaria@example.test',password:'123456',invitation:officeToken}));globalThis.__silasTestCookie=response.headers.get('set-cookie').split(';')[0];
+response=await app.guestPasswordRoute.POST(request('/api/guest/password',{password:'SecretariaSegura123',confirmation:'SecretariaSegura123'}));check(response.ok,'Office member sets own password');globalThis.__silasTestCookie=response.headers.get('set-cookie').split(';')[0];
+check((await app.snapshotRoute.GET()).ok,'Team member reads the registration list');
+check((await app.csvRoute.GET()).ok&&(await app.pdfRoute.GET()).ok,'Team member downloads Excel and PDF');
+check((await app.messagesRoute.GET()).status===403,'Team member cannot open WhatsApp notices');
+const teamForm=new FormData();teamForm.set('title','Aviso equipe');teamForm.set('body','Oi');check((await app.messagesRoute.POST(new Request('https://example.test/api/admin/messages',{method:'POST',headers:{origin:'https://example.test'},body:teamForm}))).status===403,'Team member cannot create WhatsApp notices');
+check((await app.brandsRoute.GET()).status===403,'Team member cannot open brand settings');
+const anyBrand=(await (await app.publicBrandsRoute.GET()).json())[0];
+check((await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+anyBrand.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...anyBrand,active:false})}),{params:Promise.resolve({id:anyBrand.id})})).status===403,'Team member cannot change brands');
+check((await app.accessRoute.GET()).status===403,'Team member cannot manage access');
+// Exclusão de marca (somente organização).
+globalThis.__silasTestUser=owner;globalThis.__silasTestCookie='';
+const plusForm=new FormData();plusForm.set('label','PlusCargo Teste');plusForm.set('category','supporter');plusForm.set('sortOrder','60');plusForm.set('image',new File([png],'plus.png',{type:'image/png'}));
+response=await app.brandsRoute.POST(new Request('https://example.test/api/admin/brands',{method:'POST',headers:{origin:'https://example.test'},body:plusForm}));const plus=(await response.json()).find(b=>b.label==='PlusCargo Teste');
+const delBrand=(id,version)=>app.brandRoute.DELETE(new Request('https://example.test/api/admin/brands/'+id,{method:'DELETE',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({version})}),{params:Promise.resolve({id})});
+globalThis.__silasTestUser=null;globalThis.__silasTestCookie=(await app.guestLoginRoute.POST(request('/api/guest/login',{email:'secretaria@example.test',password:'SecretariaSegura123',invitation:''}))).headers.get('set-cookie').split(';')[0];
+check((await delBrand(plus.id,plus.version)).status===403,'Team member cannot delete brands');
+globalThis.__silasTestUser=owner;globalThis.__silasTestCookie='';
+response=await delBrand(plus.id,plus.version);check(response.ok&&!(await response.json()).some(b=>b.id===plus.id),'Owner deletes an uploaded brand');
+check(!(await (await app.publicBrandsRoute.GET()).json()).some(b=>b.id===plus.id),'Deleted brand leaves the public form');
+check((await delBrand(plus.id,plus.version)).status===409,'Deleting twice reports the brand is gone');
+check((await delBrand('default-bookfair',0)).status===422,'Built-in brands are hidden, not deleted');
+// Avisos: o segundo responsável recebe no próprio celular, com o próprio nome.
+const casal={requestId:crypto.randomUUID(),phone:'(11) 93333-0001',guardians:[{key:'primary',fullName:'Mãe Aviso Teste',birthDate:'1985-01-01',attending:true},{key:'secondary',fullName:'Pai Aviso Teste',birthDate:'1984-01-01',attending:false,phone:'(11) 93333-0002'}],children:[{fullName:'Filho Aviso Teste',birthDate:'2013-01-01',affiliation:'cod',guardianKeys:['primary','secondary']},{fullName:'Filha Aviso Teste',birthDate:'2014-01-01',affiliation:'cod',guardianKeys:['primary','secondary']}],question:'',confirmed:true};
+check((await app.registrationRoute.POST(request('/api/registrations',casal))).ok,'Family with second responsible phone registered for notices');
+const noticeForm=new FormData();noticeForm.set('title','Aviso para todos');noticeForm.set('body','Olá, {responsavel}! Esperamos {criancas}.');
+response=await app.messagesRoute.POST(new Request('https://example.test/api/admin/messages',{method:'POST',headers:{origin:'https://example.test'},body:noticeForm}));const notice=await response.json();
+const dad=notice.contacts.find(c=>c.phone==='11933330002');const mom=notice.contacts.find(c=>c.phone==='11933330001');
+check(dad&&mom,'Both responsible adults are WhatsApp contacts');
+check(app.contactText(notice.body,dad).startsWith('Olá, Pai Aviso Teste! Esperamos ')&&app.contactText(notice.body,dad).includes('Filho Aviso Teste')&&app.contactText(notice.body,dad).includes('Filha Aviso Teste'),'Second responsible receives a message with their own name');
+check(app.contactText(notice.body,mom).startsWith('Olá, Mãe Aviso Teste!'),'Primary responsible receives a message with their own name');
+response=await app.accessRoute.GET();const office=(await response.json()).members.find(m=>m.email==='secretaria@example.test');await app.accessRoute.DELETE(request('/api/admin/access',{email:office.email,version:office.version}));
+globalThis.__silasTestUser=savedUser;globalThis.__silasTestCookie=savedCookie;}
 globalThis.__silasTestEnv.MASTER_LOGIN='MasterTest';
 globalThis.__silasTestEnv.MASTER_PASSWORD_HASH=await app.hashPassword(testMasterPassword);
 globalThis.__silasTestUser=null;globalThis.__silasTestCookie='';
