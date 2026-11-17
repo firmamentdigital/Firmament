@@ -90,7 +90,7 @@ echo "Saúde: $STATUS | HTTP: $HTTP"
 # 5. Agenda o deploy automático (e mantém o backup diário apontando para $APP_LINK).
 say "Agendando o deploy automático (a cada 2 minutos)"
 chmod +x "$APP_DIR/scripts/vps-autodeploy.sh"
-( crontab -l 2>/dev/null | grep -v "vps-autodeploy.sh" | grep -v "silas10/scripts/vps-backup" || true
+( crontab -l 2>/dev/null | grep -v "vps-autodeploy.sh" | grep -v "scripts/vps-backup.sh" || true
   echo "0 3 * * * cd $APP_LINK && bash scripts/vps-backup.sh >> backups/backup.log 2>&1"
   echo "*/2 * * * * DEPLOY_BRANCH=$BRANCH bash $APP_LINK/scripts/vps-autodeploy.sh >> /var/log/silas10-autodeploy.log 2>&1"
 ) | crontab -
