@@ -49,3 +49,27 @@
 .brand-delete-confirm{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px;font-size:12px;color:#6b645f;max-width:220px;text-align:right}
 /* Navegação da gestão para a equipe: só Inscrições e Presença */
 .management-main .operations-nav.team-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* Envio guiado de avisos pelo WhatsApp */
+.guided-send{border:1px solid #cde2d4;background:#f4faf6;border-radius:14px;padding:18px;margin:18px 0}
+.guided-start,.guided-finished{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap}
+.guided-start p,.guided-finished p{margin:4px 0 0;font-size:13px;color:#5f6f64;line-height:1.6}
+.guided-finished>svg{color:#226b43;flex-shrink:0}
+.guided-finished>div{flex:1}
+.guided-top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.guided-top .eyebrow{color:#226b43}
+.guided-progress{height:6px;background:#dcebe1;border-radius:6px;overflow:hidden;margin:10px 0 14px}
+.guided-progress span{display:block;height:100%;background:#2f8a57;transition:width .3s}
+.guided-contact{display:grid;gap:4px}
+.guided-contact strong{font-size:18px}
+.guided-contact span{font-size:14px;font-weight:700;color:#3f3833}
+.guided-contact small{font-size:12px;color:#77716b}
+.guided-contact em{font-size:12px;color:#b07a2a;font-style:normal}
+.guided-text{white-space:pre-wrap;background:#fff;border:1px solid #e1ece5;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.7;margin:12px 0}
+.guided-steps{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.guided-steps li{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.guided-steps .text-button{display:inline-flex;align-items:center;gap:5px}
+.guided-hint{font-size:12px;color:#5f6f64;margin:12px 0 0;line-height:1.6}
+@media(max-width:800px){.guided-steps li{flex-direction:column;align-items:stretch}.guided-steps .button{justify-content:center;min-height:50px}}
+.guided-steps li{justify-content:flex-start}
+.guided-steps li>*{flex:0 0 auto;margin:0!important;width:auto}
+@media(max-width:800px){.guided-steps li>*{width:100%}.guided-steps .text-button{justify-content:center;padding:8px 0}}
