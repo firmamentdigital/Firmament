@@ -289,6 +289,13 @@ check((await app.brandsRoute.GET()).status===403,'Team member cannot open brand 
 const anyBrand=(await (await app.publicBrandsRoute.GET()).json())[0];
 check((await app.brandRoute.PUT(new Request('https://example.test/api/admin/brands/'+anyBrand.id,{method:'PUT',headers:{origin:'https://example.test','content-type':'application/json'},body:JSON.stringify({...anyBrand,active:false})}),{params:Promise.resolve({id:anyBrand.id})})).status===403,'Team member cannot change brands');
 check((await app.accessRoute.GET()).status===403,'Team member cannot manage access');
+{const teamSnap=await (await app.snapshotRoute.GET()).json();const fam=teamSnap.families.find(f=>f.status==='active');
+check((await app.familyRoute.PUT(new Request('https://example.test/api/admin/families/'+fam.id,{method:'PUT',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:JSON.stringify({status:'cancelled',phone:fam.phone,version:fam.version})}),{params:Promise.resolve({id:fam.id})})).status===403,'Team member cannot edit or cancel a registration');
+check((await app.getEventSnapshot()).families.find(f=>f.id===fam.id).status==='active','Registration stays active after a refused team edit');
+const kid=teamSnap.participants.find(p=>p.kind==='child'&&p.familyIds.includes(fam.id));
+response=await app.attendanceRoute.POST(request('/api/admin/attendance',{id:kid.id,kind:kid.kind,present:!kid.checkedInAt,version:kid.version}));check(response.ok,'Team member confirms presence');
+const kidNow=(await app.getEventSnapshot()).participants.find(p=>p.id===kid.id);
+check((await app.attendanceRoute.POST(request('/api/admin/attendance',{id:kidNow.id,kind:kidNow.kind,present:!kidNow.checkedInAt,version:kidNow.version}))).ok,'Team member can undo a presence mark');}
 // Exclusão de marca (somente organização).
 globalThis.__silasTestUser=owner;globalThis.__silasTestCookie='';
 const plusForm=new FormData();plusForm.set('label','PlusCargo Teste');plusForm.set('category','supporter');plusForm.set('sortOrder','60');plusForm.set('image',new File([png],'plus.png',{type:'image/png'}));

@@ -9,11 +9,12 @@ function entryTime(value: string) {
   return new Date(value).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
 }
 
-export function ParticipantTable({ people, busyId, onPresence, onOpenFamily }: {
+export function ParticipantTable({ people, busyId, onPresence, onOpenFamily, canEdit = true }: {
   people: Participant[];
   busyId: string;
   onPresence: (person: Participant) => void;
   onOpenFamily: (id: string) => void;
+  canEdit?: boolean;
 }) {
   return <>
     <p className="table-scroll-hint">Uma pessoa por linha. No celular, deslize a tabela para ver todas as colunas.</p>
@@ -31,7 +32,7 @@ export function ParticipantTable({ people, busyId, onPresence, onOpenFamily }: {
             {busyId === person.id ? <LoaderCircle size={16} className="spin" /> : person.checkedInAt ? <Check size={16} /> : <span className="table-check-box" />}
             {person.checkedInAt ? "Presente" : "Confirmar presença"}
           </button>{person.checkedInAt && <small className="table-entry-time">Entrada às {entryTime(person.checkedInAt)}</small>}</td>
-          <td className="table-actions"><span className="table-family-code">{person.familyCodes.join(" · ")}</span><button className="table-edit-button" onClick={() => onOpenFamily(person.familyIds[0])} aria-label={"Ver ou editar inscrição de " + person.fullName}>Ver / editar <ChevronRight size={15} /></button>
+          <td className="table-actions"><span className="table-family-code">{person.familyCodes.join(" · ")}</span><button className="table-edit-button" onClick={() => onOpenFamily(person.familyIds[0])} aria-label={(canEdit ? "Ver ou editar inscrição de " : "Ver detalhes da inscrição de ") + person.fullName}>{canEdit ? "Ver / editar" : "Ver detalhes"} <ChevronRight size={15} /></button>
             {person.familyIds.length > 1 && <select aria-label={"Outras inscrições de " + person.fullName} value="" onChange={e => { if (e.target.value) onOpenFamily(e.target.value); }}><option value="">Outras inscrições</option>{person.familyIds.map((id, index) => <option key={id} value={id}>{person.familyCodes[index]}</option>)}</select>}
           </td>
         </tr>)}</tbody>
@@ -40,7 +41,7 @@ export function ParticipantTable({ people, busyId, onPresence, onOpenFamily }: {
   </>;
 }
 
-export function FamilyTable({ families, onOpenFamily }: { families: FamilyDetail[]; onOpenFamily: (id: string) => void }) {
+export function FamilyTable({ families, onOpenFamily, canEdit = true }: { families: FamilyDetail[]; onOpenFamily: (id: string) => void; canEdit?: boolean }) {
   return <>
     <p className="table-scroll-hint">Uma inscrição por linha, com todas as crianças e responsáveis da família. Deslize para ver mais.</p>
     <div className="management-table-shell" tabIndex={0} role="region" aria-label="Tabela de inscrições por família com rolagem horizontal">
@@ -54,10 +55,10 @@ export function FamilyTable({ families, onOpenFamily }: { families: FamilyDetail
             <th scope="row" className="table-person"><strong className="table-family-code">{family.code}</strong><small>{new Date(family.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</small></th>
             <td className="table-children">{family.children.map(child => <div key={child.id}><strong>{child.fullName}</strong><small>{child.age} anos · {affiliationLabel(child.affiliation)}</small></div>)}</td>
             <td className="table-guardians">{family.guardians.map(person => <div key={person.id}><strong>{person.fullName}</strong><small>{person.attending ? "Acompanhará o encontro" : person.primary ? "Contato da família" : "Não irá ao encontro"}</small></div>)}</td>
-            <td className="table-phone table-guardian-phones">{family.guardians.map(person => <div key={person.id}>{person.phone ? <a href={"tel:+55" + person.phone}>{formatPhone(person.phone)}</a> : <span className="phone-missing">Sem celular · editar</span>}<small aria-hidden="true">&nbsp;</small></div>)}</td>
+            <td className="table-phone table-guardian-phones">{family.guardians.map(person => <div key={person.id}>{person.phone ? <a href={"tel:+55" + person.phone}>{formatPhone(person.phone)}</a> : <span className="phone-missing">{canEdit ? "Sem celular · editar" : "Sem celular"}</span>}<small aria-hidden="true">&nbsp;</small></div>)}</td>
             <td><span className={"family-status " + family.status}>{family.status === "cancelled" ? "Cancelada" : "Ativa"}</span></td>
             <td><strong>{family.status === "cancelled" ? "—" : present + " de " + expected}</strong><small>{family.status === "cancelled" ? "Fora da recepção" : "pessoas presentes"}</small></td>
-            <td className="table-actions"><button className="table-edit-button" onClick={() => onOpenFamily(family.id)} aria-label={"Ver ou editar inscrição " + family.code}>Ver / editar <ChevronRight size={15} /></button>{family.questions.length > 0 && <span className="table-observation"><MessageSquareText size={14} />Tem dúvida</span>}</td>
+            <td className="table-actions"><button className="table-edit-button" onClick={() => onOpenFamily(family.id)} aria-label={(canEdit ? "Ver ou editar inscrição " : "Ver detalhes da inscrição ") + family.code}>{canEdit ? "Ver / editar" : "Ver detalhes"} <ChevronRight size={15} /></button>{family.questions.length > 0 && <span className="table-observation"><MessageSquareText size={14} />Tem dúvida</span>}</td>
           </tr>;
         })}</tbody>
       </table>
