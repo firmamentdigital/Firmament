@@ -29,7 +29,10 @@ if [[ "$REPO_URL" == git@github.com:* ]]; then
     ssh-keygen -q -t ed25519 -N "" -C "silas10-vps-deploy" -f "$KEY"
   fi
   export GIT_SSH_COMMAND="ssh -i $KEY -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-  if ! $GIT_SSH_COMMAND -T git@github.com 2>&1 | grep -q "successfully authenticated"; then
+  # O GitHub sempre encerra "ssh -T" com código 1 (não oferece terminal), mesmo
+  # autenticado; por isso a resposta é guardada antes de ser conferida.
+  AUTH_REPLY="$($GIT_SSH_COMMAND -T git@github.com 2>&1 || true)"
+  if ! grep -q "successfully authenticated" <<< "$AUTH_REPLY"; then
     say "FALTA UM PASSO NO GITHUB"
     echo "Copie a chave abaixo (a linha inteira, começa com ssh-ed25519):"
     echo
@@ -38,6 +41,8 @@ if [[ "$REPO_URL" == git@github.com:* ]]; then
     echo "No GitHub: repositório Firmament → Settings → Deploy keys → Add deploy key"
     echo "  Title: VPS Silas 10    Key: cole a linha acima    NÃO marque 'Allow write access'"
     echo "Depois rode este instalador de novo."
+    echo
+    echo "(Resposta do GitHub: $(head -c 300 <<< "$AUTH_REPLY"))"
     exit 2
   fi
 fi
