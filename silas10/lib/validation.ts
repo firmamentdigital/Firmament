@@ -16,7 +16,9 @@ const guardian = z.object({
 const child = z.object({
   fullName,
   birthDate,
-  affiliation: z.enum(CHILD_AFFILIATIONS, { errorMap: () => ({ message: "Selecione o vínculo de cada criança: Sócio COD ou Escola de Atletismo." }) }),
+  affiliation: z.enum(CHILD_AFFILIATIONS, { errorMap: () => ({ message: "Selecione o vínculo de cada criança: Sócio COD, Escola de Atletismo ou Outro." }) }),
+  // Obrigatório quando o vínculo é "Outro".
+  affiliationOther: z.string().trim().max(80, "Descreva o vínculo em até 80 caracteres.").optional(),
   guardianKeys: z.array(guardianKey).min(1, "Vincule um responsável a cada criança.").max(2, "Cada criança pode ter no máximo dois responsáveis."),
 });
 
@@ -38,6 +40,11 @@ export const registrationSchema = z.object({
   if (hasSecondary && value.children.length < 2) {
     ctx.addIssue({ code: "custom", path: ["guardians"], message: "O segundo responsável pode ser incluído quando houver duas ou mais crianças na inscrição." });
   }
+  value.children.forEach((item, index) => {
+    if (item.affiliation === "other" && (item.affiliationOther || "").length < 2) {
+      ctx.addIssue({ code: "custom", path: ["children", index, "affiliationOther"], message: "Informe qual é o vínculo da criança quando escolher \"Outro\"." });
+    }
+  });
   value.guardians.forEach((person, index) => {
     if (person.key === "secondary" && !isMobilePhone(normalizePhone(person.phone || ""))) {
       ctx.addIssue({ code: "custom", path: ["guardians", index, "phone"], message: "Informe o celular do segundo responsável com DDD e 9 dígitos." });

@@ -35,7 +35,9 @@ export const children = sqliteTable("children", {
   familyId: text("family_id").notNull().references(() => families.id),
   fullName: text("full_name").notNull(),
   birthDate: text("birth_date").notNull(),
-  affiliation: text("affiliation", { enum: ["cod", "athletics"] }),
+  affiliation: text("affiliation", { enum: ["cod", "athletics", "other"] }),
+  // Texto livre quando o vínculo é "Outro".
+  affiliationOther: text("affiliation_other"),
   createdAt: text("created_at").notNull(),
   checkedInAt: text("checked_in_at"),
   checkedInBy: text("checked_in_by"),

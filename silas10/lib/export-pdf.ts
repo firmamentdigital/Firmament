@@ -130,7 +130,7 @@ export async function buildRegistrationPdf(snapshot: EventSnapshot): Promise<Uin
       [
         { text: person.kind === "child" ? "Criança / jovem" : "Responsável", bold: true },
         { text: person.age + " anos · " + formatBirthDate(person.birthDate), muted: true },
-        ...(person.kind === "child" ? wrap(affiliationLabel(person.affiliation), COLUMN_WIDTHS[2] - 14).map(text => ({ text, muted: true })) : []),
+        ...(person.kind === "child" ? wrap(affiliationLabel(person.affiliation, person.affiliationOther), COLUMN_WIDTHS[2] - 14).map(text => ({ text, muted: true })) : []),
       ],
       wrap(person.phone.split(" / ").map(formatPhone).join(" / "), COLUMN_WIDTHS[3] - 14).map(text => ({ text })),
       person.familyCodes.flatMap(code => wrap(code, COLUMN_WIDTHS[4] - 14)).map(text => ({ text, muted: true })),
@@ -200,7 +200,7 @@ export async function buildRegistrationPdf(snapshot: EventSnapshot): Promise<Uin
     textBlock("CONTATO PRINCIPAL", family.primaryGuardianName);
     for (const child of family.children) {
       textBlock("CRIANÇA / JOVEM", child.fullName + " · " + formatBirthDate(child.birthDate) + " · " + child.age + " anos" + (child.checkedInAt ? " · Presente" : " · A confirmar"));
-      textBlock("VÍNCULO DA CRIANÇA", affiliationLabel(child.affiliation));
+      textBlock("VÍNCULO DA CRIANÇA", affiliationLabel(child.affiliation, child.affiliationOther));
       textBlock("RESPONSÁVEIS VINCULADOS", child.guardianNames.join("; ") || "Sem vínculo informado");
     }
     for (const guardian of family.guardians) {

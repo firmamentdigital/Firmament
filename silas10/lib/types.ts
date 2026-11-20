@@ -13,6 +13,8 @@ export type ChildInput = {
   fullName: string;
   birthDate: string;
   affiliation: ChildAffiliation;
+  /** Texto do vínculo quando affiliation = "other". */
+  affiliationOther?: string;
   guardianKeys: string[];
 };
 
@@ -36,6 +38,7 @@ export type Participant = {
   id: string;
   kind: "child" | "guardian";
   affiliation: ChildAffiliation | null;
+  affiliationOther?: string | null;
   fullName: string;
   birthDate: string;
   age: number;
@@ -57,7 +60,7 @@ export type FamilyDetail = {
   version: number;
   children: {
     id: string; fullName: string; birthDate: string; age: number;
-    affiliation: ChildAffiliation | null;
+    affiliation: ChildAffiliation | null; affiliationOther: string | null;
     checkedInAt: string | null; guardianNames: string[];
   }[];
   guardians: {

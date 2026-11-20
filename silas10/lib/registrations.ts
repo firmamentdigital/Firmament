@@ -79,8 +79,8 @@ export async function registerFamily(raw: unknown) {
       .bind(familyId, person.id, Number(person.attending), ownPhone));
   }
   for (const child of children) {
-    statements.push(db.prepare("INSERT INTO children (id, family_id, full_name, birth_date, affiliation, created_at) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET family_id = CASE WHEN children.family_id = excluded.family_id THEN children.family_id ELSE NULL END, affiliation = excluded.affiliation")
-      .bind(child.id, familyId, child.fullName, child.birthDate, child.affiliation, now));
+    statements.push(db.prepare("INSERT INTO children (id, family_id, full_name, birth_date, affiliation, affiliation_other, created_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET family_id = CASE WHEN children.family_id = excluded.family_id THEN children.family_id ELSE NULL END, affiliation = excluded.affiliation, affiliation_other = excluded.affiliation_other")
+      .bind(child.id, familyId, child.fullName, child.birthDate, child.affiliation, child.affiliation === "other" ? child.affiliationOther || null : null, now));
     for (const key of child.guardianKeys) {
       const guardian = guardians.find(item => item.key === key)!;
       statements.push(db.prepare("INSERT INTO child_guardians (child_id, guardian_id) VALUES (?, ?) ON CONFLICT(child_id, guardian_id) DO NOTHING")

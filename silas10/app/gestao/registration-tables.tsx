@@ -27,7 +27,7 @@ export function ParticipantTable({ people, busyId, onPresence, onOpenFamily, can
           <td><span>{formatBirthDate(person.birthDate)}</span><small>{person.age} anos no encontro</small></td>
           <td className="table-linked"><span>{person.linkedNames.join(", ") || "—"}</span><small>{person.kind === "child" ? "Responsável vinculado" : "Crianças vinculadas"}</small></td>
           <td className="table-phone">{person.phone.split(" / ").map(phone => <a key={phone} href={"tel:+55" + phone}>{formatPhone(phone)}</a>)}</td>
-          <td><span className={"table-affiliation" + (person.kind === "guardian" ? " muted" : "")}>{person.kind === "child" ? affiliationLabel(person.affiliation) : "Acompanhante"}</span></td>
+          <td><span className={"table-affiliation" + (person.kind === "guardian" ? " muted" : "")}>{person.kind === "child" ? affiliationLabel(person.affiliation, person.affiliationOther) : "Acompanhante"}</span></td>
           <td><button className={"table-presence-button" + (person.checkedInAt ? " checked" : "")} disabled={Boolean(busyId)} onClick={() => onPresence(person)} aria-label={(person.checkedInAt ? "Desfazer presença de " : "Registrar presença de ") + person.fullName}>
             {busyId === person.id ? <LoaderCircle size={16} className="spin" /> : person.checkedInAt ? <Check size={16} /> : <span className="table-check-box" />}
             {person.checkedInAt ? "Presente" : "Confirmar presença"}
@@ -53,7 +53,7 @@ export function FamilyTable({ families, onOpenFamily, canEdit = true }: { famili
           const present = family.children.filter(p => p.checkedInAt).length + family.guardians.filter(p => p.attending && p.checkedInAt).length;
           return <tr key={family.id} className={family.status === "cancelled" ? "table-cancelled" : ""}>
             <th scope="row" className="table-person"><strong className="table-family-code">{family.code}</strong><small>{new Date(family.createdAt).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" })}</small></th>
-            <td className="table-children">{family.children.map(child => <div key={child.id}><strong>{child.fullName}</strong><small>{child.age} anos · {affiliationLabel(child.affiliation)}</small></div>)}</td>
+            <td className="table-children">{family.children.map(child => <div key={child.id}><strong>{child.fullName}</strong><small>{child.age} anos · {affiliationLabel(child.affiliation, child.affiliationOther)}</small></div>)}</td>
             <td className="table-guardians">{family.guardians.map(person => <div key={person.id}><strong>{person.fullName}</strong><small>{person.attending ? "Acompanhará o encontro" : person.primary ? "Contato da família" : "Não irá ao encontro"}</small></div>)}</td>
             <td className="table-phone table-guardian-phones">{family.guardians.map(person => <div key={person.id}>{person.phone ? <a href={"tel:+55" + person.phone}>{formatPhone(person.phone)}</a> : <span className="phone-missing">{canEdit ? "Sem celular · editar" : "Sem celular"}</span>}<small aria-hidden="true">&nbsp;</small></div>)}</td>
             <td><span className={"family-status " + family.status}>{family.status === "cancelled" ? "Cancelada" : "Ativa"}</span></td>

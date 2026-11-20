@@ -5,7 +5,7 @@ import { AppError } from "./http";
 import { affiliationLabel, type ChildAffiliation } from "./affiliation";
 
 type PersonRow = { id: string; full_name: string; birth_date: string; checked_in_at: string | null; version: number };
-type ChildRow = PersonRow & { family_id: string; affiliation: ChildAffiliation | null };
+type ChildRow = PersonRow & { family_id: string; affiliation: ChildAffiliation | null; affiliation_other: string | null };
 type FamilyRow = { id: string; code: string; primary_guardian_id: string; phone: string; created_at: string; status: "active" | "cancelled"; version: number };
 type FamilyGuardianRow = { family_id: string; guardian_id: string; will_attend: number; phone: string | null };
 type ChildGuardianRow = { child_id: string; guardian_id: string };
@@ -15,7 +15,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
   if (!env.DB) throw new AppError(503, "O banco de inscrições ainda está sendo preparado.");
   const results = await env.DB.batch([
     env.DB.prepare("SELECT id, code, primary_guardian_id, phone, created_at, status, version FROM families ORDER BY created_at DESC"),
-    env.DB.prepare("SELECT id, family_id, full_name, birth_date, affiliation, checked_in_at, version FROM children ORDER BY full_name"),
+    env.DB.prepare("SELECT id, family_id, full_name, birth_date, affiliation, affiliation_other, checked_in_at, version FROM children ORDER BY full_name"),
     env.DB.prepare("SELECT id, full_name, birth_date, checked_in_at, version FROM guardians ORDER BY full_name"),
     env.DB.prepare("SELECT family_id, guardian_id, will_attend, phone FROM family_guardians"),
     env.DB.prepare("SELECT child_id, guardian_id FROM child_guardians"),
@@ -45,7 +45,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
     primaryGuardianName: guardianMap.get(family.primary_guardian_id)?.full_name || "",
     children: allChildren.filter(child => child.family_id === family.id).map(child => ({
       id: child.id, fullName: child.full_name, birthDate: child.birth_date,
-      affiliation: child.affiliation,
+      affiliation: child.affiliation, affiliationOther: child.affiliation_other,
       age: ageAtEvent(child.birth_date)!, checkedInAt: child.checked_in_at,
       guardianNames: childLinks.filter(link => link.child_id === child.id).map(link => guardianMap.get(link.guardian_id)?.full_name || ""),
     })),
@@ -65,7 +65,7 @@ export async function getEventSnapshot(): Promise<EventSnapshot> {
     const family = familyMap.get(child.family_id)!;
     return {
       id: child.id, kind: "child", fullName: child.full_name, birthDate: child.birth_date,
-      affiliation: child.affiliation,
+      affiliation: child.affiliation, affiliationOther: child.affiliation_other,
       age: ageAtEvent(child.birth_date)!, phone: familyPhones(family.id).join(" / "),
       familyCodes: [family.code], familyIds: [family.id],
       linkedNames: childLinks.filter(link => link.child_id === child.id).map(link => guardianMap.get(link.guardian_id)?.full_name || ""),
@@ -122,7 +122,7 @@ export function snapshotCsv(snapshot: EventSnapshot) {
       person.linkedNames.join(" | "), person.familyCodes.join(" | "),
       person.checkedInAt ? "Presente" : "Aguardando",
       person.checkedInAt ? new Date(person.checkedInAt).toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }) : "",
-      [...new Set(questions)].join(" | "), person.kind === "child" ? affiliationLabel(person.affiliation) : "",
+      [...new Set(questions)].join(" | "), person.kind === "child" ? affiliationLabel(person.affiliation, person.affiliationOther) : "",
     ]);
   }
   return "\uFEFF" + rows.map(row => row.map(csvCell).join(";")).join("\r\n");

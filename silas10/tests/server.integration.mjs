@@ -58,9 +58,9 @@ await build({stdin:{contents:entry,resolveDir:root,loader:'ts'},absWorkingDir:ro
 const app=await import(pathToFileURL(resolve(work,'server.mjs')).href+'?'+Date.now());
 let checks=0;function check(value,message){assert.ok(value,message);checks++;}
 const legacyDb=new DatabaseSync(':memory:');legacyDb.exec('PRAGMA foreign_keys=ON');
-for(const f of (await readdir(resolve(root,'drizzle'))).filter(f=>f.endsWith('.sql')&&!f.startsWith('0003')).sort())legacyDb.exec(await readFile(resolve(root,'drizzle',f),'utf8'));
+for(const f of (await readdir(resolve(root,'drizzle'))).filter(f=>f.endsWith('.sql')&&f<'0003').sort())legacyDb.exec(await readFile(resolve(root,'drizzle',f),'utf8'));
 legacyDb.exec("INSERT INTO guardians(id,full_name,birth_date,created_at) VALUES ('legacy_a','Adulto anterior A','1980-01-01','2026-11-01'),('legacy_b','Adulto anterior B','1981-01-01','2026-11-01'); INSERT INTO families(id,code,primary_guardian_id,phone,created_at) VALUES ('legacy_family','S10-LEGACY0000','legacy_a','11900000003','2026-11-01'); INSERT INTO family_guardians(family_id,guardian_id) VALUES ('legacy_family','legacy_a'),('legacy_family','legacy_b'); INSERT INTO children(id,family_id,full_name,birth_date,created_at) VALUES ('legacy_child','legacy_family','Criança anterior','2014-01-01','2026-11-01'); INSERT INTO child_guardians(child_id,guardian_id) VALUES ('legacy_child','legacy_a'),('legacy_child','legacy_b');");
-for(const f of (await readdir(resolve(root,'drizzle'))).filter(f=>f.startsWith('0003')&&f.endsWith('.sql')))legacyDb.exec(await readFile(resolve(root,'drizzle',f),'utf8'));
+for(const f of (await readdir(resolve(root,'drizzle'))).filter(f=>f>='0003'&&f.endsWith('.sql')).sort())legacyDb.exec(await readFile(resolve(root,'drizzle',f),'utf8'));
 check(legacyDb.prepare('SELECT COUNT(*) AS n FROM child_guardians').get().n===2&&legacyDb.prepare('SELECT affiliation FROM children').get().affiliation===null,'Existing registrations and their original relationships survive the new migration');legacyDb.close();
 const owner={userId:'verified-owner-site-id',email:'owner@example.test'};
 const request=(path,data)=>new Request('https://example.test'+path,{method:'POST',headers:{Origin:'https://example.test','Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -319,6 +319,17 @@ check(app.contactText(notice.body,dad).startsWith('Olá, Pai Aviso Teste! Espera
 check(app.contactText(notice.body,mom).startsWith('Olá, Mãe Aviso Teste!'),'Primary responsible receives a message with their own name');
 response=await app.accessRoute.GET();const office=(await response.json()).members.find(m=>m.email==='secretaria@example.test');await app.accessRoute.DELETE(request('/api/admin/access',{email:office.email,version:office.version}));
 globalThis.__silasTestUser=savedUser;globalThis.__silasTestCookie=savedCookie;}
+// Vínculo "Outro" com texto livre.
+{const outro={requestId:crypto.randomUUID(),phone:'(11) 94444-0001',guardians:[{key:'primary',fullName:'Responsável Outro Vínculo Teste',birthDate:'1980-02-02',attending:true}],children:[{fullName:'Criança Outro Vínculo Teste',birthDate:'2013-05-05',affiliation:'other',affiliationOther:'  Escola Municipal Teste  ',guardianKeys:['primary']}],question:'',confirmed:true};
+response=await app.registrationRoute.POST(request('/api/registrations',{...outro,children:[{...outro.children[0],affiliationOther:''}]}));check(response.status===422,'"Outro" requires describing the affiliation');
+response=await app.registrationRoute.POST(request('/api/registrations',{...outro,children:[{...outro.children[0],affiliationOther:'x'.repeat(81)}]}));check(response.status===422,'"Outro" description is limited to 80 characters');
+response=await app.registrationRoute.POST(request('/api/registrations',outro));check(response.ok,'"Outro" with a description is accepted');
+const snapOutro=await app.getEventSnapshot();const kidOutro=snapOutro.participants.find(p=>p.fullName==='Criança Outro Vínculo Teste');
+check(kidOutro.affiliation==='other'&&kidOutro.affiliationOther==='Escola Municipal Teste','"Outro" description is stored trimmed');
+check(snapOutro.families.find(f=>f.children.some(c=>c.fullName==='Criança Outro Vínculo Teste')).children[0].affiliationOther==='Escola Municipal Teste','Family view carries the "Outro" description');
+assert.throws(()=>sqlite.prepare("UPDATE children SET affiliation_other=NULL WHERE id=?").run(kidOutro.id),/child_affiliation_required/);checks++;
+assert.throws(()=>sqlite.prepare("INSERT INTO children (id,family_id,full_name,birth_date,affiliation,created_at) VALUES ('c_x',?, 'X','2014-01-01','other','2026-11-20')").run(snapOutro.families[0].id),/child_affiliation_required/);checks++;
+check(app.contactText('{criancas}',{responsibleNames:[],childNames:['A'],codes:[]})==='A','Message helpers unaffected');}
 globalThis.__silasTestEnv.MASTER_LOGIN='MasterTest';
 globalThis.__silasTestEnv.MASTER_PASSWORD_HASH=await app.hashPassword(testMasterPassword);
 globalThis.__silasTestUser=null;globalThis.__silasTestCookie='';
