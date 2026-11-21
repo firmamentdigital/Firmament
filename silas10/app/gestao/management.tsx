@@ -55,7 +55,7 @@ function FamilyDialog({ family, onClose, refresh, isOwner }: { family: FamilyDet
   </dialog>;
 }
 
-export default function Management({ userName, signOutPath, initialCode = "", isOwner, userEmail, isGuest = false, sessionLogoutPath = "" }: { userName: string; signOutPath: string; initialCode?: string; isOwner: boolean; userEmail: string; isGuest?: boolean; sessionLogoutPath?: string }) {
+export default function Management({ userName, signOutPath, initialCode = "", isOwner, userEmail, isGuest = false, sessionLogoutPath = "", initialRaffle = false }: { initialRaffle?: boolean; userName: string; signOutPath: string; initialCode?: string; isOwner: boolean; userEmail: string; isGuest?: boolean; sessionLogoutPath?: string }) {
   const [data, setData] = useState<EventSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,7 +70,7 @@ export default function Management({ userName, signOutPath, initialCode = "", is
   const [page, setPage] = useState(0);
   const [busyId, setBusyId] = useState("");
   const [familyId, setFamilyId] = useState<string | null>(null);
-  const [operation, setOperation] = useState<"list" | "reception" | "messages" | "settings" | "raffle">(initialCode ? "reception" : "list");
+  const [operation, setOperation] = useState<"list" | "reception" | "messages" | "settings" | "raffle">(initialCode ? "reception" : initialRaffle ? "raffle" : "list");
   const sequence = useRef(0);
 
   const refresh = useCallback(async () => {
