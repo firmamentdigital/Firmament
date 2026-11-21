@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleAlert, Copy, DoorOpen, Download, Eye, LoaderCircle, MessageSquareText, MessageCircle, QrCode, Phone, RefreshCw, Search, UsersRound, X, ShieldCheck, Settings2, Save, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowLeft, ArrowRight, ArrowUpRight, Check, CircleAlert, Copy, DoorOpen, Download, Eye, LoaderCircle, MessageSquareText, MessageCircle, QrCode, Phone, RefreshCw, Search, UsersRound, X, ShieldCheck, Settings2, Save, Trash2, Gift } from "lucide-react";
 import { formatBirthDate, formatPhone, normalizeName, maskMobilePhone } from "@/lib/event";
 import type { EventSnapshot, FamilyDetail, Participant } from "@/lib/types";
 import { affiliationLabel } from "@/lib/affiliation";
@@ -9,6 +9,7 @@ import MessageCenter from "./message-center";
 import EventSettings from "./event-settings";
 import { ParticipantTable, FamilyTable } from "./registration-tables";
 import FamilyMergePanel from "./family-merge-panel";
+import Raffle from "./raffle";
 
 function clock(value: string) {
   return new Date(value).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
@@ -69,7 +70,7 @@ export default function Management({ userName, signOutPath, initialCode = "", is
   const [page, setPage] = useState(0);
   const [busyId, setBusyId] = useState("");
   const [familyId, setFamilyId] = useState<string | null>(null);
-  const [operation, setOperation] = useState<"list" | "reception" | "messages" | "settings">(initialCode ? "reception" : "list");
+  const [operation, setOperation] = useState<"list" | "reception" | "messages" | "settings" | "raffle">(initialCode ? "reception" : "list");
   const sequence = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -155,7 +156,7 @@ export default function Management({ userName, signOutPath, initialCode = "", is
     catch { setError("Não foi possível sair agora. Tente novamente."); }
   }
 
-  function selectOperation(next: "list" | "reception" | "messages" | "settings") {
+  function selectOperation(next: "list" | "reception" | "messages" | "settings" | "raffle") {
     setOperation(next);
     requestAnimationFrame(() => document.getElementById("management-operations")?.scrollIntoView({ block: "start" }));
   }
@@ -172,9 +173,10 @@ export default function Management({ userName, signOutPath, initialCode = "", is
         <div className="stat-card highlight"><span>Presenças confirmadas</span><strong>{stats?.present ?? "—"}<em> / {stats?.expected ?? 0}</em></strong><div className="attendance-meter"><span style={{ width: stats?.expected ? Math.round(stats.present / stats.expected * 100) + "%" : "0%" }} /></div></div>
       </section>
       {error && <div className="form-error management-error" role="alert"><CircleAlert size={19} /><span>{error}</span><button className="text-button" onClick={() => void refresh()}>Tentar novamente</button></div>}
-      <nav id="management-operations" className={"operations-nav"+(isOwner?"":" team-nav")} aria-label="Ações da gestão"><button className={operation==="list"?"active":""} aria-current={operation==="list"?"page":undefined} onClick={()=>selectOperation("list")}><UsersRound size={19}/><span>Inscrições</span></button><button className={operation==="reception"?"active":""} aria-current={operation==="reception"?"page":undefined} onClick={()=>selectOperation("reception")}><QrCode size={19}/><span>Presença / QR Code</span></button>{isOwner&&<><button className={operation==="messages"?"active":""} aria-current={operation==="messages"?"page":undefined} onClick={()=>selectOperation("messages")}><MessageCircle size={19}/><span>WhatsApp</span></button><button className={operation==="settings"?"active":""} aria-current={operation==="settings"?"page":undefined} onClick={()=>selectOperation("settings")}><Settings2 size={19}/><span>Configurações</span></button></>}</nav>
+      <nav id="management-operations" className={"operations-nav"+(isOwner?"":" team-nav")} aria-label="Ações da gestão"><button className={operation==="list"?"active":""} aria-current={operation==="list"?"page":undefined} onClick={()=>selectOperation("list")}><UsersRound size={19}/><span>Inscrições</span></button><button className={operation==="reception"?"active":""} aria-current={operation==="reception"?"page":undefined} onClick={()=>selectOperation("reception")}><QrCode size={19}/><span>Presença / QR Code</span></button><button className={operation==="raffle"?"active":""} aria-current={operation==="raffle"?"page":undefined} onClick={()=>selectOperation("raffle")}><Gift size={19}/><span>Sorteio</span></button>{isOwner&&<><button className={operation==="messages"?"active":""} aria-current={operation==="messages"?"page":undefined} onClick={()=>selectOperation("messages")}><MessageCircle size={19}/><span>WhatsApp</span></button><button className={operation==="settings"?"active":""} aria-current={operation==="settings"?"page":undefined} onClick={()=>selectOperation("settings")}><Settings2 size={19}/><span>Configurações</span></button></>}</nav>
       {isOwner&&operation==="settings"&&<EventSettings isOwner={isOwner} ownerEmail={userEmail}/>}
       {operation==="reception"&&data&&<QrReception data={data} initialCode={initialCode} refresh={refresh}/>}
+      {operation==="raffle"&&data&&<Raffle data={data}/>}
       {isOwner&&operation==="messages"&&data&&<MessageCenter contactCount={new Set(data.families.filter(f=>f.status==="active").flatMap(f=>[f.phone,...f.guardians.filter(g=>!g.primary&&g.phone).map(g=>g.phone as string)])).size}/>}
       {operation!=="list"&&operation!=="settings"&&!data&&<div className="empty-state"><LoaderCircle className="spin" size={28}/><p>Carregando os dados da gestão…</p></div>}
       {operation==="list"&&<section className="management-list">

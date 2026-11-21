@@ -1,0 +1,44 @@
+/* Sorteio entre os presentes (aba Sorteio da gestão). */
+.management-main .operations-nav { display: flex; }
+.management-main .operations-nav button { flex: 1 1 0; min-width: 0; }
+.raffle-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin-bottom: 18px; color: #6f6862; font-size: 14px; }
+.raffle-meta > span { display: inline-flex; align-items: center; gap: 7px; }
+.raffle-meta strong { color: #231f1c; font-size: 16px; }
+.raffle-toggle { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; font-size: 13px; cursor: pointer; }
+.raffle-toggle input { width: 18px; height: 18px; accent-color: #cb1833; }
+.raffle-stage { position: relative; min-height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; padding: 40px 24px; border-radius: 18px; background: radial-gradient(circle at 50% 0%, #2c1418 0%, #17171a 70%); color: #fff; overflow: hidden; }
+.raffle-name { font-size: clamp(32px, 5.4vw, 68px); line-height: 1.1; letter-spacing: -1.5px; font-weight: 800; overflow-wrap: anywhere; max-width: 100%; }
+.raffle-name.idle { font-size: clamp(26px, 3.6vw, 42px); letter-spacing: -.8px; }
+.raffle-detail { color: #c9c0b8; font-size: 15px; }
+.raffle-idle-icon { color: #e04a60; }
+.raffle-stage.spinning .raffle-name { opacity: .78; filter: blur(.4px); }
+.raffle-stage.revealed { background: radial-gradient(circle at 50% 10%, #c61a34 0%, #7d0f21 55%, #3a0a12 100%); }
+.raffle-stage.revealed .raffle-name { animation: raffle-pop .55s cubic-bezier(.2, 1.4, .4, 1) both; }
+.raffle-badge { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 99px; background: #ffffff26; font-size: 13px; font-weight: 800; letter-spacing: .4px; text-transform: uppercase; animation: raffle-pop .5s ease both; }
+@keyframes raffle-pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.raffle-actions { display: flex; justify-content: center; margin: 22px 0 6px; }
+.raffle-draw { min-height: 60px; padding: 14px 40px; font-size: 18px; }
+.raffle-winners { margin-top: 26px; border-top: 1px solid #eae6e2; padding-top: 22px; }
+.raffle-winners-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.raffle-winners-head h3 { margin: 0; font-size: 19px; }
+.raffle-winners-head > div { display: flex; gap: 16px; }
+.raffle-winners-head .text-button { display: inline-flex; align-items: center; gap: 6px; }
+.raffle-winners ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.raffle-winners li { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 1px solid #e8e3df; border-radius: 12px; background: #faf9f7; }
+.raffle-winners li b { color: #c61a34; font-size: 16px; min-width: 30px; }
+.raffle-winners li span { display: grid; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
+.raffle-winners li strong { font-size: 15px; }
+.raffle-winners li small { font-size: 12px; color: #81796f; }
+/* Tela cheia para projetor/TV. */
+.raffle-panel.raffle-fullscreen { margin: 0; border-radius: 0; border: 0; min-height: 100vh; overflow: auto; display: flex; flex-direction: column; padding: 32px 48px; }
+.raffle-fullscreen .raffle-stage { flex: 1; min-height: 50vh; }
+.raffle-fullscreen .raffle-name { font-size: clamp(44px, 7.5vw, 110px); }
+.raffle-fullscreen .raffle-detail { font-size: 22px; }
+.raffle-fullscreen .raffle-draw { min-height: 72px; font-size: 22px; padding: 16px 56px; }
+@media (max-width: 800px) {
+  .raffle-toggle { margin-left: 0; }
+  .raffle-stage { min-height: 240px; padding: 28px 16px; }
+  .raffle-draw { width: 100%; justify-content: center; }
+  .raffle-panel.raffle-fullscreen { padding: 18px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .raffle-stage.revealed .raffle-name, .raffle-badge { animation: none; } }
